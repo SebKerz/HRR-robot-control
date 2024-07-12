@@ -1,0 +1,13 @@
+# TUM LAB setup
+# note that all parameters here overwrite the values from hrr_cobot.prefix.yaml
+robot_ip: "172.22.163.207"       # this the the IP of the Robot
+use_tool_changer_encoder: True   # use electric shield to enable tool-changer
+use_vacuum_control_encoder: False # use electric shield to enable pneumatic valve
+
+tool_change_routine:  
+  tool_change_poses_path: /home/hrr_cobot/_ros/hr_recycler_ws/src/hrr_cobot/hrr_cobot_robot/data/tool_changer
+
+initialize_matlab: False           # enable Matlab based motion planner
+matlab_working_dir: /home/hrr_cobot/_ros/hr_recycler_ws/src/planner/src  # working directory for Matlab
+
+toolchanger_dout_pin: 11 #pin to open/close tool changer

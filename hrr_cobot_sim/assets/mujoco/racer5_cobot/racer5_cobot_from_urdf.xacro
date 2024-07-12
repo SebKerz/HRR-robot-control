@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="racer5_cobot">
+  <xacro:include filename="$(find racer5_support)/model/racer5_cobot.config.xacro"/>
+  <xacro:include filename="$(find comau_desciption)/urdf/racer5_cobot/model/racer5-cobot.urdf.xacro"/>
+  <!-- use macro for compilation -->
+  <mujoco>
+   <compiler meshdir="$(find comau_desciption)/meshes/racer5_cobot"  balanceinertia="true"  discardvisual="false"/>
+  </mujoco>
+
+  <link name="world"/>  
+  <xacro:racer5 name="racer5"  parent="world" robot_type="cobot"/>
+</robot>

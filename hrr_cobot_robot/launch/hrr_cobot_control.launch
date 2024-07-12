@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="ns"             doc="namespace in which the robot is spawned"           default="/"/>
+  <arg name="robot_name"     doc="Robot name"           default="hrr_cobot"/>
+  <arg name="robot_prefix"   doc="URDF robot prefix"    default=""/>
+  <arg name="tum_lab"        doc="load configuration for TUM or pilot"    default="false"/>
+
+  <arg name="controllers" doc="Controllers that are activated by default."
+       default="joint_state_controller
+                cartesian_state_controller 
+                comau_robot_state_controller
+                ft_state_controller"/>
+
+  <arg name="stopped_controllers"
+       doc="Controllers that are only loaded upon start."
+       default="sensor_track_velocity_controller"/>
+  
+  <!-- Variables -->
+  <!--namespace for gripper and F/T-sensor-->
+  <arg name="cobot_ns" value="$(arg ns)$(arg robot_name)"/>
+  <arg name="ft_sensor_ns"   value="ft_sensor"/>
+  <arg name="gripper_ns"   value="gripper"/>
+  
+  <!-- files to ease readability -->
+  <arg name="hrr_cobot_config_file" value="$(find hrr_cobot_robot)/config/hrr_cobot.prefix.yaml"/>
+  <arg name="tum_config_file" value="$(find hrr_cobot_robot)/config/tum.yaml"/>
+  <arg name="pilot_conifg_file" value="$(find hrr_cobot_robot)/config/pilot.yaml"/>
+
+  <!-- load & partially set parameters before launching the robot driver -->
+  <param name="/wsg_node_name"   value="$(arg cobot_ns)$(arg gripper_ns)"/>
+  <group ns="$(arg robot_name)">
+     <param name="ft_sensor_ns"           value="$(arg ft_sensor_ns)"/>
+     <param name="gripper_ns"             value="$(arg gripper_ns)"/>
+     <param name="gain_cfg_name"          value="$(arg cobot_ns)"/>
+     <param name="controller_manager_ns"  value="$(arg cobot_ns)/controller_manager"/>
+     <rosparam file="$(arg hrr_cobot_config_file)" command="load"/>
+     <rosparam if="$(eval arg('tum_lab'))" file="$(arg tum_config_file)" command="load"/>
+     <rosparam if="$(eval not arg('tum_lab'))" file="$(arg pilot_conifg_file)" command="load"/>
+  </group>
+
+  <!-- Launch Robot HW interface node -->
+  <node name="$(arg robot_name)" pkg="hrr_cobot_robot" type="hrr_cobot_node" output="screen" args="-p 95"/>
+
+  <!-- controller manager handling -->
+  <group ns="$(arg robot_name)">
+     <!-- Launch controller manager Spawner-->    
+     <node name="controller_spawner" pkg="controller_manager"  type="spawner"
+          respawn="false" output="screen" args=" $(arg controllers)"/>
+
+     <!-- load other controllers -->
+     <node name="controller_loader" pkg="controller_manager"
+          type="controller_manager"
+          respawn="false" output="screen"
+          args="load $(arg stopped_controllers)"/>
+  </group>
+</launch>

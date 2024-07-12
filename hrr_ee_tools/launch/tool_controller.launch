@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="node_name" default="tool_controller" doc="name of ROS->arduino control node"/>
+    <arg name="device" default="/dev/ttyUSB0" doc="Arduino device IF. Defaults to /dev/ttyUSB0 (default USB port)"/>
+    <arg name="baud" default="57600" doc="Baud rate for Arduino Communication. Defaults to 57600"/>
+    <arg name="ns" default="hrr_cobot" doc="namespace in which the tool-controller will be launched"/>
+ 
+    <!-- launch VALVE interface using the rosserial arduino package -->
+    <node name="$(arg node_name)" pkg="rosserial_python" type="serial_node.py" respawn="false" output="screen" ns="$(arg ns)">
+		<param name="port" value="$(arg device)"/>
+        <param name="baud" value="$(arg baud)"/>
+        <param name="tool_reset_srv_name" value="$(arg node_name)/reset"/>
+        <param name="set_control_mode_topic_name" value="$(arg node_name)/set_control_mode"/>
+        <param name="shaft_grinder_speed_topic_name" value="$(arg node_name)/grinder_speed"/>
+        <param name="screwdriver_button_topic_name" value="$(arg node_name)/screwdriver/motor"/>
+        <param name="screwdriver_mode_topic_name" value="$(arg node_name)/screwdriver/set_program"/>
+
+	</node>
+
+</launch>

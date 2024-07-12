@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="tool_name"            default=""          doc="Tool name for current robot "/>
+  <arg name="robot_name"           default="hrr_cobot" doc="robot name. Expects a *.launch and a *.rviz file within this package "/>
+  <arg name="robot_prefix"         default=""          doc="robot URDF-prefix. Useful for multi-robot setups "/>
+  <arg name="with_state_publisher" default="true"      doc="If this is true it will start the joint state publisher gui and the robot state publisher"/>
+
+  <arg name="cobot_ns" value="/$(arg robot_name)"/>
+
+  <group ns="$(arg robot_name)">
+    <include file="$(find hrr_common)/launch/$(arg robot_name).launch">
+      <arg name="tool_name" value="$(arg tool_name)"/>
+      <arg name="robot_name" value="$(arg robot_name)"/>
+      <arg name="robot_prefix" value="$(arg robot_prefix)"/>
+    </include>
+    <node  if="$(arg with_state_publisher)"
+    name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui"  
+    />
+  </group>
+  <group if="$(arg with_state_publisher)">
+    <arg name="joint_topic_names" value="[$(arg cobot_ns)/joint_states,$(arg cobot_ns)/gripper/joint_states]"/>
+    <node ns ="/"
+          name="$(arg robot_name)robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+          args="robot_description:=/hrr_cobot/robot_description"/>
+    <node name="full_joint_state_publisher" pkg="hrr_common" type="joint_state_publisher" output="screen" respawn="true">
+        <param name="robot_description" value="$(arg cobot_ns)/robot_description"/>
+        <param name="publish_rate" value="30"/>
+        <rosparam param="source_list" subst_value="True">$(arg joint_topic_names)</rosparam>
+    </node>
+    <!-- <node name="joint_state_publisher" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" /> -->
+    <!-- robot state poublisher-->
+<!--    <include file="$(find hrr_common)/launch/robot_state_publisher.launch">-->
+<!--        <arg name="cobot_ns"   value="/$(arg robot_name)"/>-->
+<!--        <arg name="robot_name" value="$(arg robot_name)"/>-->
+<!--        <arg name="remap_joints" value="false"/>-->
+<!--    </include>-->
+
+  </group>
+
+  <include file="$(find hrr_common)/launch/rviz.launch">
+    <arg name="rviz_file" value="$(find hrr_common)/rviz/$(arg robot_name).rviz"/>
+  </include>
+</launch>

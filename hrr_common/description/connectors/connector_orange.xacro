@@ -1,0 +1,51 @@
+<?xml version="0.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="connector_orange">
+
+  <xacro:macro name="connector_orange" params="name parent:='' xyz:='0 0 0' rpy:='0 0 0'">
+    <!-- Joint /-->
+	<xacro:unless value="${not parent}">
+    <joint name="${parent}${name}_attach_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}_base"/>
+	  <origin rpy="${rpy}" xyz="${xyz}"/>
+    </joint>
+	</xacro:unless>
+    <!-- Link /-->
+    <link name="${name}_base">
+      <visual>
+        <origin xyz="0 0 0.0045" rpy="0 0 0" />
+        <geometry>
+         <cylinder radius="0.03" length="0.009"/>
+        </geometry>
+                 <!-- <color rgba="1.0 0.55 0.0 1.0"/> -->
+         <material name="hrr_orange"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.0045" rpy="0 0 0" />
+        <geometry>
+         <cylinder radius="0.03" length="0.009"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.2"/>
+        <origin xyz="0 0 .0045"/>
+        <inertia ixx="0.01" ixy="0.0" ixz="0.0"
+                 iyy="0.01" iyz="0.0"
+                 izz="0.01" />
+      </inertial>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <origin xyz="0 0 0.009" rpy="0 0 0"/>
+      <parent link="${name}_base"/>
+      <child link="${name}"/>
+    </joint>
+    <link name="${name}">
+    </link>
+    <gazebo reference="${name}_base">
+      <gravity>true</gravity>
+      <material>Gazebo/Orange</material>
+    </gazebo>
+   </xacro:macro>
+
+</robot>

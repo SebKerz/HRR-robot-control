@@ -1,0 +1,34 @@
+#!/usr/bin/env zsh
+function info(){
+python -c "import rospy
+rospy.loginfo('${1}')"
+}
+
+function warn(){
+python -c "import rospy
+rospy.logwarn('${1}')"
+}
+
+{ cobot_ns=$(rosparam get /cobot_ns)  } || { cobot_ns="/hrr_cobot" }
+{ restart_sleep_time=$(rosparam get ${cobot_ns}/restart_sleep_time) } || { restart_sleep_time=5 }
+{ robot_name=$(rosparam get ${cobot_ns}/name) } || { robot_name="hrr_cobot" }
+  sleep "${restart_sleep_time}";
+{
+	rosnode kill ${robot_name}robot_state_publisher  &>/dev/null &
+} || {
+	{
+		rosnode kill /${robot_name}robot_state_publisher  &>/dev/null &
+	} || {
+		warn "no robot state publisher active"
+   }
+}
+{
+	rosrun robot_state_publisher robot_state_publisher \
+        robot_description:="${cobot_ns}/robot_description" \
+        __name:="${robot_name}robot_state_publisher" \
+		__ns:="/"  &>/dev/null &
+	info "restarted robot_state_publsiher"
+} || {
+	warn "could not launch robot_state_publisher"
+}
+

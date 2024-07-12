@@ -1,0 +1,9 @@
+int8 IDLE = 0
+int8 ENABLED = 1
+int8 OFF = -1
+int8 ERROR = -2
+int8 state
+comau_msgs/Digital[] pins_desired
+-----
+bool success
+string msg

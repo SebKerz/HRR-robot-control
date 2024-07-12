@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- arguments -->
+    <arg name="rosbag_dir" doc="path where the bags will be saved at"/>
+    <arg name="bag_file_name" doc="name of rosbag file prefix"/>
+    <arg name="trigger_cmd"   default="record_trigger"  doc="name of rosnode to be spawned."/>
+    <arg name="use_keyboard_trigger"   default="false"  doc="enable robsag record via keyboard (enter)"/>
+
+	<!-- launch record watchdog -->
+    <node if="$(arg use_keyboard_trigger)" name="schrott_trigger" pkg="hrr_common" type="trigger_dummy" respawn="false" output="screen">
+		<param name="trigger_topic" value="/$(arg trigger_cmd)"/>
+	</node>
+
+	<!-- launch data recorder -->
+	<node name="data_recorder" pkg="hrr_common" type="record_master" output="screen">
+		<param name="bag_file_name" value="$(arg bag_file_name)"/>
+		<param name="data_dir"      value="$(arg rosbag_dir)"/>
+		<param name="trigger_topic" value="/$(arg trigger_cmd)"/>
+	</node>
+</launch>

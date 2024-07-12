@@ -1,0 +1,179 @@
+# --- URDF prefix sensitive variables
+base_link_name: &base_link_name base_link
+sns_frame: &sns_frame tcp_controller
+ft_link: &ft_link jr3msr
+#---
+loop_hz: &robot_loop_hz 200
+read_loop_hz: &robot_read_loop_hz 200
+# Publish all joint states ----------------------------------
+joint_state_controller:
+   type:         joint_state_controller/JointStateController
+   publish_rate: *robot_read_loop_hz
+
+comau_robot_state_controller:
+   type:          hrr_controllers/TP5StateController
+   robot_hw_name: hrr_cobot
+   publish_rate:  *robot_read_loop_hz
+
+cartesian_state_controller:
+   type:          hrr_controllers/CartesianStateController
+   hw_name:       tcp_controller
+   publish_rate:  *robot_read_loop_hz
+   base_frame:    *base_link_name
+   target_frame:  *sns_frame
+
+
+# hybrid force-velocity controller
+sensor_track_compliant_controller:
+   type: hrr_controllers/CompliancePoseController
+   sns_trk_hw_name: tcp_controller
+   base_frame: *base_link_name
+   target_frame: *sns_frame
+   debug: true
+   cmd_topic_name: tcp_v_cmd
+   ee_v_max: 0.2
+   dead_man_timeout: 0.1
+   wrench_cur_topic_name: "/hrr_cobot/ft_calibrator/B_F_ext"
+   control_select_topic_name: "S"
+   full_cmd_topic_name: "hybrid_ctrl_cmd"
+   f_max: 80.0
+   m_max: 80.0
+   publish_ft: true
+   loop_hz: *robot_loop_hz
+
+ft_calibrator:
+   read_ft: true
+   cmd_sns_vel: true
+   cmd_sns_compl: false
+   read_tp5: true
+   use_joint_traj_handler: true
+   sns_frame: *sns_frame
+   *base_link_name: *base_link_name
+   ft_link: *ft_link
+   tip_link: *sns_frame
+   v_max: 0.1
+   omega_max: 0.1
+
+# feedforward velocity-controller
+sensor_track_velocity_controller:
+   type: hrr_controllers/SnsTrkVelocityPoseController
+   sns_trk_hw_name: tcp_controller
+   base_frame: *base_link_name
+   debug: false
+   target_frame: *sns_frame
+   cmd_topic_name: tcp_v_cmd
+   ee_v_max: 0.2
+   dead_man_timeout: 0.1
+   loop_hz: *robot_loop_hz
+
+# Joint Trajectory Loader Handler
+joint_trajectory_handler:
+   type: comau_controllers/JointTrajectoryHandler
+   hw_trajectory_handle: hrr_cobot
+   publish_rate: 50
+
+# Joint Trajectory Loader Handler
+cartesian_trajectory_handler:
+   type: comau_controllers/CartesianTrajectoryHandler
+   hw_trajectory_handle: *sns_frame
+   publish_rate: 50
+
+
+ft_state_controller:
+   type: force_torque_sensor_controller/ForceTorqueSensorController
+   publish_rate: &sensor_hz 1000
+
+# DOUT / DIN controllers
+digital_io_state_controller:
+   type: hrr_controllers/DigitalIOStateController
+   publish_rate: 1
+
+vacuum_controller:
+   type: hrr_controllers/DigitalPinController
+   get_state_srv_name: get_pins
+   set_state_srv_name: set_pins
+   frame_id: vacuum_gripper
+   pins: [1, 3]
+   pin_start_values: [1, 0]
+
+tool_changer:
+   type: hrr_controllers/DigitalPinController
+   get_state_srv_name: get_pins
+   set_state_srv_name: set_pins
+   set_state: set_state
+   frame_id: tool_changer
+   pins: [5]
+   pin_start_values: [0]
+
+kolver_program:
+   type: hrr_controllers/DoutEncoderController
+   get_state_srv_name: get_program
+   set_state_srv_name: set_program
+   frame_id: "screwdriver"
+   enable_encoder_pin: 10
+   encoder_pins: [7, 8, 9]
+   legal_programs: [1,2,3,4,5,6,7,8]
+   program_names:
+     - slow
+     - medium1
+     - medium2
+     - medium3
+     - medium4
+     - medium5
+     - medium6
+     - full_speed
+   program_numbers: [1,2,3,4,5,6,7,8]
+
+kolver_run:
+   type: hrr_controllers/DoutEncoderController
+   get_state_srv_name: get_pins
+   set_state_srv_name: set_mode
+   frame_id: "screwdriver"
+   enable_encoder_pin: 14
+   encoder_pins: [11, 12, 13]
+   legal_programs: [6]
+   program_names:
+     - loosening
+   program_numbers:
+     - 6
+
+shaft_grinder:
+   type: hrr_controllers/DoutEncoderController
+   get_state_srv_name: get_shaft_grinder_state
+   set_state_srv_name: set_shaft_grinder_speed
+   frame_id: "shaft_grinder"
+   enable_encoder_pin: 14
+   encoder_pins: [11, 12, 13]
+   legal_programs: [3,4,5]
+   program_names:
+     - slow
+     - variable
+     - full_speed
+   program_numbers: [3,4,5]
+
+
+gimatic_encoder_controller:
+   type: hrr_controllers/DoutEncoderController
+   get_state_srv_name: get_pins
+   set_state_srv_name: set_mode
+   frame_id: "tool_changer"
+   enable_encoder_pin: 14
+   encoder_pins: [11, 12, 13]
+   legal_programs: [7,8]
+   program_names:
+     - open
+     - close
+   program_numbers: [6,7,8]
+
+
+
+# set controller names for other programs
+comau_state_controller_name: comau_robot_state_controller
+joint_trajectory_handler_name: joint_trajectory_handler
+sns_trk_vel_controller_name: sensor_track_velocity_controller
+sns_trk_compl_controller_name: sensor_track_compliant_controller
+kolver_command_controller_name: kolver_run
+kolver_program_controller_name: kolver_program
+shaft_grinder_controller_name: shaft_grinder
+gimatic_encoder_controller_name: gimatic_encoder_controller
+gimatic_pin_controller_name: tool_changer

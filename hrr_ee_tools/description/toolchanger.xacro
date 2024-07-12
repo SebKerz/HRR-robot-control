@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="toolchanger">
+
+
+  <xacro:macro name="toolchanger" params="parent prefix:='' no_fucks_given:=0">
+
+    <!-- Links /-->
+
+    <link name="${prefix}toolchanger_body_A">
+      <visual>
+        <origin xyz="0.0 0.0 0.0" rpy="3.1415926535897931 0 0" />
+        <geometry>
+          <mesh filename="package://hrr_ee_tools/meshes/EQC20-A.stl" scale="0.001 0.001 0.001" />
+        </geometry>
+        <material name="hrr_black"/>
+      </visual>
+      <collision>
+        <origin xyz="0.0 0.0 0.0" rpy="3.1415926535897931 0 0" />
+        <geometry>
+          <mesh filename="package://hrr_ee_tools/meshes/EQC20-A.stl" scale="0.001 0.001 0.001" />
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="1.0"/>
+        <origin xyz="0 0 .015"/>
+        <inertia ixx="1." ixy="0.0" ixz="0.0" iyy="1." iyz="0.0" izz="1." />
+      </inertial>
+    </link>
+
+      <link name="${prefix}toolchanger_body_B">
+      <visual>
+        <origin xyz="0.0 0.0 0.0045" rpy="-1.57079632679 0 0" />
+        <geometry>
+          <mesh filename="package://hrr_ee_tools/meshes/EQC20-B_simple.stl" scale="0.001 0.001 0.001" />
+        </geometry>
+        <material name="hrr_silver"/>
+      </visual>
+      <collision>
+       <origin xyz="0.0 0.0 0.0045" rpy="-1.57079632679 0 0" />
+        <geometry>
+          <mesh filename="package://hrr_ee_tools/meshes/EQC20-B_simple.stl" scale="0.001 0.001 0.001" />
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="1.0"/>
+        <origin xyz="0 0 .015"/>
+        <inertia ixx="1." ixy="0.0" ixz="0.0" iyy="1." iyz="0.0" izz="1." />
+      </inertial>
+    </link>
+
+
+    <gazebo reference="${prefix}toolchanger_body_A">
+      <gravity>true</gravity>
+      <material>Gazebo/Black</material>
+    </gazebo>
+    <gazebo reference="${prefix}toolchanger_body_A">
+      <gravity>true</gravity>
+      <material>Gazebo/Black</material>
+    </gazebo>
+
+
+    <link name="${prefix}toolchanger_connect"/>
+
+    <joint name="${prefix}toolchanger_attach_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${prefix}toolchanger_body_A"/>
+        <xacro:if value="${no_fucks_given == 1}">
+          <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.7853981633974483"/>
+        </xacro:if>
+        <xacro:unless value="${no_fucks_given == 0}">
+          <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+        </xacro:unless>
+    </joint>
+
+    <joint name="${prefix}toolchanger_mount" type="fixed">
+      <origin xyz="0 0.0 0.037" rpy="0 0 0"/>
+      <parent link="${prefix}toolchanger_body_A"/>
+      <child link="${prefix}toolchanger_body_B"/>
+    </joint>
+
+    <joint name="${prefix}toolchanger_B_tip" type="fixed">
+      <origin xyz="0 0.0 0.0215" rpy="0 0 0.0"/>
+      <parent link="${prefix}toolchanger_body_B"/>
+      <child link="${prefix}toolchanger_connect"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

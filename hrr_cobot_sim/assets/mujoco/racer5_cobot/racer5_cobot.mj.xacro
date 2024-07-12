@@ -1,0 +1,195 @@
+<?xml version="1.0"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+   <xacro:include filename="$(find comau_description)/urdf/racer5-0-80/racer5-kinmatics.config.xacro"/>
+   <xacro:include filename="$(find comau_sim)/robots/mujoco/mujoco_common.xacro"/>
+
+
+	<xacro:macro name="racer5_joint_control" params="prefix group:='0'">
+	<actuator >
+		<position ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q1_lim} ${q1_lim}" 
+			joint="${name}_joint_1" kp="2000" name="${name}_joint_1" 
+			user="1"/>
+		<position ctrllimited="true" 
+			group="${group}"
+			ctrlrange="${q2_lim_low} ${q2_lim_up}" 
+			joint="${name}_joint_2" kp="2000" name="${name}_joint_2" 
+			user="1"/>
+		<position ctrllimited="true" 
+			group="${group}"
+			ctrlrange="${q3_lim_low} ${q3_lim_up}" 
+			joint="${name}_joint_3" kp="2000" name="${name}_joint_3" 
+			user="1"/>
+		<position ctrllimited="true" 
+			group="${group}"
+			ctrlrange="${q4_lim_low} ${q4_lim_up}" 
+			joint="${name}_joint_4" kp="1000" name="${name}_joint_4" 
+			user="1"/>
+		<position ctrllimited="true" 
+			group="${group}"
+			ctrlrange="${q5_lim_low} ${q5_lim_up}" 
+			joint="${name}_joint_5" kp="600" name="${name}_joint_5" 
+			user="1"/>
+		<position ctrllimited="true" 
+			group="${group}"
+			ctrlrange="${q6_lim_low} ${q6_lim_up}" 
+			joint="${name}_joint_6" kp="600" name="${name}_joint_6" 
+			user="1"/>		
+	 </actuator>
+     <xacro:jnt_contact_excludes name="${name}"/>
+	</xacro:macro>
+	
+	<xacro:macro name="racer5_joint_velocity_control" params="prefix group:='0'">
+	<actuator >
+		<velocity ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q1_dot_lim} ${q1_dot_lim}" 
+			joint="${name}_joint_1" kv="2000" name="${name}_joint_1" 
+			user="1"/>
+		<velocity ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q2_dot_lim} ${q2_dot_lim}" 
+			joint="${name}_joint_2" kv="2000" name="${name}_joint_2" 
+			user="1"/>
+		<velocity ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q3_dot_lim} ${q3_dot_lim}" 
+			joint="${name}_joint_3" kv="2000" name="${name}_joint_3" 
+			user="1"/>
+		<velocity ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q4_dot_lim} ${q4_dot_lim}" 
+			joint="${name}_joint_4" kv="1000" name="${name}_joint_4" 
+			user="1"/>
+		<velocity ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q5_dot_lim} ${q5_dot_lim}" 
+			joint="${name}_joint_5" kv="600" name="${name}_joint_5" 
+			user="1"/>
+		<velocity ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q6_dot_lim} ${q6_dot_lim}" 
+			joint="${name}_joint_6" kv="600" name="${name}_joint_6" 
+			user="1"/>		
+	 </actuator>
+     <xacro:jnt_contact_excludes name="${name}"/>
+	</xacro:macro>
+
+
+	<xacro:macro name="racer5_joint_torque_control" params="prefix group:='0'">
+	<actuator >
+		<motor ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q1_tau_lim} ${q1_tau_lim}" 
+			joint="${name}_joint_1" name="${name}_joint_1" 
+			user="1"/>
+		<motor ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q2_tau_lim} ${q2_tau_lim}" 
+			joint="${name}_joint_2" name="${name}_joint_2" 
+			user="1"/>
+		<motor ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q3_tau_lim} ${q3_tau_lim}" 
+			joint="${name}_joint_3" name="${name}_joint_3" 
+			user="1"/>
+		<motor ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q4_tau_lim} ${q4_tau_lim}" 
+			joint="${name}_joint_4" name="${name}_joint_4" 
+			user="1"/>
+		<motor ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q5_tau_lim} ${q5_tau_lim}"
+			joint="${name}_joint_5" name="${name}_joint_5" 
+			user="1"/>
+		<motor ctrllimited="true" 
+			group="${group}"
+			ctrlrange="-${q6_tau_lim} ${q6_tau_lim}" 
+			joint="${name}_joint_6" name="${name}_joint_6" 
+			user="1"/>		
+	 </actuator>
+     <xacro:jnt_contact_excludes name="${name}"/>
+	</xacro:macro>
+
+
+
+
+   <xacro:macro name="racer5_compiler" params="dt">
+     <compiler angle="radian" coordinate="local"     
+	          meshdir="$(find racer5_support)/meshes/racer5_cobot" 
+              texturedir="$(find racer5_sim)/textures"
+			  balanceinertia="true"
+              />
+     <option timestep="${dt}">
+	  <flag warmstart="enable"></flag>
+     </option>
+   </xacro:macro>
+
+   <!-- mesh transformation / rotations to fit current kinematics -->
+   <xacro:macro name="racer5_body" params="name:='racer5'
+		parent:=''
+		xyz:='0.5 0.50 0.0' rpy:='0.0 0.0 0.0'
+		robot_ns:='racer5'
+		group:='0'
+    ">	
+	<body childclass="${name}_body" name="${name}_base_link" pos="${xyz}" euler="${rpy}">
+		<xacro:link_0_inertial/>
+		<geom group="${group}" mesh="racer5:base_link" 
+		      name="${name}_base_link" material="${name}_base_mat" class="comau_dark_grey"/>
+		<body name="${name}_link_1" pos="${dp_ba_l1}">
+			<xacro:link_1_inertial/>
+			<joint group="${group}" axis="${ax_q1}" name="${name}_joint_1"
+				   range="-${q1_lim} ${q1_lim}"/>
+			<geom mesh="racer5:link_1" name="${name}_link_1" 
+				  group="${group}"     euler="${tf_l1_rot}"
+				  material="${name}_arm_mat_low" class="comau_grey"/>
+			<body name="${name}_link_2" pos="${dp_l1_l2}">
+				<xacro:link_2_inertial/>
+				<joint group="${group}" axis="${ax_q2}" 
+				       name="${name}_joint_2" solimpfriction="0.9 0.95 0.0"
+   					   range="${q2_lim_low} ${q2_lim_up}"/>
+				<geom mesh="racer5:link_2" name="${name}_link_2" group="${group}"
+                      material="${name}_arm_mat_low" class="comau_dark_grey"/>
+				<body name="${name}_link_3" pos="${dp_l2_l3}">
+					<xacro:link_3_inertial/>
+					<joint group="${group}" axis="${ax_q3}" name="${name}_joint_3" 
+   						   range="${q3_lim_low} ${q3_lim_up}"/>
+					<geom mesh="racer5:link_3" name="${name}_link_3"
+                          group="${group}"
+						  material="${name}_arm_mat_low" class="comau_grey"/>
+					<body name="${name}_link_4" pos="${dp_l3_l4}">
+						<xacro:link_4_inertial/>
+						<joint group="${group}" axis="${ax_q4}" name="${name}_joint_4" 
+                               range="-${q4_lim} ${q4_lim}"/>
+						<geom mesh="racer5:link_4" name="${name}_link_4" 
+                              group="${group}"
+							  material="${name}_arm_mat_high" class="comau_grey"/>
+						<body name="${name}_link_5"	 pos="${dp_l4_l5}" >
+							<xacro:link_5_inertial/>
+							<joint group="${group}" axis="${ax_q5}" name="${name}_joint_5" 
+                                   range="-${q5_lim} ${q5_lim}"/>
+							<geom mesh="racer5:link_5" name="${name}_link_5" 
+                                  group="${group}"
+								  material="${name}_arm_mat_high" class="comau_dark_grey">
+							</geom>
+							<body name="${name}_link_6"	 pos="${dp_l5_l6}">
+								<xacro:link_6_inertial/>
+								<joint group="${group}" axis="${ax_q6}" name="${name}_joint_6" 
+                                       range="-${q6_lim} ${q6_lim}"/>
+								<geom mesh="racer5:link_6" name="${name}_link_6"
+                                      group="${group}"
+                                      material="${name}_flange_mat" class="comau_grey"
+								      contype="1" conaffinity="1"/>
+								<site name="${name}_touch"   type="cylinder" size="0.025 0.001" pos="0 0 0.0135"/>
+	    					</body>
+						</body>
+					</body>
+				</body>
+			</body>
+		</body>		
+	</body>
+	</xacro:macro>
+	
+</mujoco>

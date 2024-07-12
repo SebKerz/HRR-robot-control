@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!-- Offline Camera processor
+
+starts camera from rosbag and launches calibration unit
+--> 
+<launch>
+    <!-- arguments -->
+    <arg name="rosbag_file"  doc="path to 'camera'-bag"/>
+    <arg name="use_voxel_nodelets" default="True" doc="start downsample / voxedl nodelet launch file"/>
+    <arg name="use_tf_broadcaster"   default="False" doc="start TF2 ROS transform broadcaster from world->camera frame"/>
+
+    <node pkg="rosbag" type="play" name="player" output="screen"
+        args="-l $(arg rosbag_file)"/>
+    <node if="$(arg use_tf_broadcaster)" name="cam_calibrator" pkg="hrr_common" type="cam_calibrator" respawn="true" output="screen">
+    </node>
+
+    <include if="$(arg use_voxel_nodelets)" file="$(find hrr_common)/launch/voxel_nodelets.launch"/>
+</launch>

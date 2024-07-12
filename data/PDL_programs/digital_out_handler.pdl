@@ -1,0 +1,142 @@
+PROGRAM digital_out_server NOHOLD, &PA, STACK = 10004
+  ---------------------------------------------------------------
+  --- Author: Volker Gabler
+  --- Brief:  Digital OUT Array for arbitrary commands 
+  --- over TCP/IP communication  
+  ---------------------------------------------------------------
+ 
+TYPE
+  ---------------------------------------------------------------
+  --- Record: DIGITAL_OUT_MESSAGE_TYPE
+  --- Brief: Structure for describing the command message. 
+  ---------------------------------------------------------------
+  DIGITAL_OUT_MESSAGE_TYPE = RECORD
+    id : INTEGER                                   -- Unique identifier of the message
+    digital_cmds: ARRAY[16] of REAL                -- digital OUT data 
+  ENDRECORD
+
+CONST
+  ci_dv_tcp_accept = 29                 -- DV_CNTRL code for port to socket connection
+  ci_dv_tcp_connect = 30                -- DV_CNTRL code to activate TCP connection (TCP go UP)
+  ci_dv_tcp_disconnect = 31             -- DV_CNTRL code to deactivate TCP connection (TCP go DOWN)
+  ci_local_port = 1107                  -- TCP server "listening" port (local to the server)
+  cs_main_log = '[DIGITAL_OUT_SERVER] ' -- Name for main loop used in LUN_CRT 
+
+VAR
+  -- Shared variables
+  digital_out_values:  ARRAY[16] of REAL EXPORTED FROM digital_out_server    -- Shared variable for gripper state
+  shutdown: BOOLEAN EXPORTED FROM robot_server            -- shared variable for stopping the program
+  si_verbose : INTEGER EXPORTED FROM robot_server         -- Level of logging
+
+  -- Global variables 
+  vs_server_host : STRING[100] NOSAVE         -- Server IP address
+  vi_server_netlun : INTEGER NOSAVE           -- TCP socket identifier
+  vs_screen_lun : INTEGER                     -- Output screen identifier
+  vb_comm_success : BOOLEAN                   -- Communication status flag
+
+
+  --------------------------------------------------------------------
+  --- Routine: throw_error
+  --- Brief: Update the state machine of the robot
+  --------------------------------------------------------------------
+ROUTINE throw_error(error_msg : STRING)
+BEGIN
+   --ss_state := 'E' --ERROR
+   shutdown := TRUE
+   WRITE vs_screen_lun (cs_main_log, '[ERROR] : ', error_msg, NL)
+END throw_error
+
+  -- Declaration of shared functions 
+ROUTINE tcp_server_accept(netlun, port, screenlun, verbose : INTEGER; log_tag : STRING) EXPORTED FROM pdl_tcp_functions
+ROUTINE tcp_server_disconnect(netlun, screenlun, verbose : INTEGER; log_tag : STRING) EXPORTED FROM pdl_tcp_functions
+
+
+  ------------------------------------------------------------------
+  --- Routine: receive_digital_out_message
+  --- Brief: Receiving the digital_out command and send it for execution 
+  ------------------------------------------------------------------
+ROUTINE receive_digital_out_message : BOOLEAN
+VAR
+  t_i : INTEGER
+  t_msg : DIGITAL_OUT_MESSAGE_TYPE
+BEGIN
+  READ vi_server_netlun (t_msg.id::4)             -- Read the digital_out message unique identifier
+  READ vi_server_netlun (t_msg.digital_cmds::4)   -- Read the open close flag (needs checks -> currently only one flag not all)
+  digital_out_values := t_msgs.digital_cms
+  IF si_verbose = 1 THEN 
+    WRITE vs_screen_lun (cs_main_log, "Received digital OUT message : ", digital_out_values, NL)
+  ENDIF
+  RETURN(TRUE)
+END receive_digital_out_message
+
+
+  ------------------
+  ---- MAIN LOOP 
+  ------------------
+BEGIN
+  vb_comm_success := TRUE       -- init communication status flag
+  vs_server_host := $NET_L[1]   -- get IP from controller settings
+  vs_screen_lun := LUN_CRT      -- define output 
+
+  WRITE vs_screen_lun (NL, "------", NL, "Digital OUT Server starting... ", NL)
+  
+  -- opens the socket 
+  OPEN FILE vi_server_netlun ('NETT:', 'rw'),
+    WITH $FL_BINARY = TRUE,
+  ENDOPEN
+
+  IF VAR_UNINIT(shutdown) THEN
+    WRITE LUN_CRT (cs_main_log, 'Initialize shutdown to FALSE', NL)
+    shutdown := FALSE -- FALSE
+  ENDIF
+  IF VAR_UNINIT(si_verbose) THEN
+    WRITE LUN_CRT (cs_main_log, 'Initialize verbose to Debug', NL)
+    si_verbose := 1
+  ENDIF
+  --- needs chacking
+  --IF VAR_UNINIT(vi_digital_out_command) THEN
+  --  WRITE LUN_CRT (cs_main_log, 'Initialize verbose to Debug', NL)
+  --  vi_digital_out_command := 0
+  --ENDIF
+  --IF VAR_UNINIT(digital_out_state) THEN
+  --  WRITE LUN_CRT (cs_main_log, 'Initialize verbose to Debug', NL)
+  --  gripper_state := 0
+  --ENDIF
+  
+  WRITE vs_screen_lun (cs_main_log, "Server Address : ", vs_server_host, NL)
+  WRITE vs_screen_lun (cs_main_log, "Server Port    :", ci_local_port, NL)
+  WRITE vs_screen_lun (cs_main_log, "Waiting for connections...", NL)
+  tcp_server_accept((vi_server_netlun), ci_local_port, vs_screen_lun, si_verbose, cs_main_log)
+  WRITE vs_screen_lun (cs_main_log, "Starting cycle...", NL)
+
+  REPEAT
+
+    ---- Receive command --> needs rework and testing
+    --vb_comm_success := receive_digital_out_message
+    --IF vb_comm_success = FALSE THEN
+    --  throw_error("Receive robot command failed")
+    --ENDIF
+
+    --IF si_verbose = 1 THEN 
+    --  WRITE vs_screen_lun (cs_main_log, "The digital_out command is : ",vi_digital_out_command, NL)
+    --ENDIF
+
+    --IF vi_digital_out_command = 1 THEN
+    --  WRITE vs_screen_lun (cs_main_log, "I am closing the digital_out", NL)
+    --  -- put code here
+    --ENDIF 
+    --IF vi_digital_out_command = 0 THEN
+    --  WRITE vs_screen_lun (cs_main_log, "I am opening the digital_out", NL)
+    --  -- put code here
+    --ENDIF 
+
+  UNTIL shutdown   -- Main loop
+
+  WRITE vs_screen_lun (cs_main_log, 'Connection closed.', NL)
+  DELAY 500
+  WRITE vs_screen_lun (NL, cs_main_log, 'Restarting Robot State Server ... ', NL)
+  WRITE vs_screen_lun (cs_main_log, "Connection closed.", NL)
+  DELAY 500
+  CLOSE FILE vi_server_netlun
+  
+END digital_out_server

@@ -1,0 +1,138 @@
+#!/usr/bin/env python
+# author: v.gabler@tum.de
+# simple static broadcaster for a depth camera via ROS
+from functools import partial
+import click
+import numpy as np
+
+import rospy
+import tf2_ros
+from geometry_msgs.msg import TransformStamped, Vector3, Quaternion
+from sensor_msgs.msg import PointCloud2
+from hrr_common import PclData
+
+
+def get_trans_params():
+    return rospy.get_param('W_p_x', 0.258), rospy.get_param('W_p_y', 0.0), rospy.get_param('W_p_z', 0.657)
+
+
+def get_camera_translation():
+    # type:() -> Vector3
+    """
+    get translation from world to camera frame. Default obtained from offline example.
+    Use ros parameters ``W_p_x`` (y,z) for arbitrary settings.
+
+    Returns:
+        Vector3: translation from world to camera center
+    """
+    return Vector3(*get_trans_params())
+
+
+def get_camera_rotation():
+    # type: () -> Quaternion
+    """
+    Get rotation from world to camera frame.
+    Default orientation obtained from basic offline example, but requires spatialmath python
+    (only available for python3.6+ (https://pypi.org/project/spatialmath-python/)) for current default variables
+
+    Note:
+        for older version the default rotation is given as the identity
+
+    Returns:
+        Quaternion: rotation from world to camera center / frame
+    """
+    try:
+        import spatialmath as sm
+        q = sm.base.r2q(sm.base.roty(150, unit="deg") @ sm.base.rotz(-90., unit="deg"))
+    except:
+        rospy.logerror("could not import python-spatialmath. Set default orientation to identity")
+        q = np.r_[1., 0., 0., 0.]
+    rot = Quaternion()
+    rot.w = rospy.get_param('W_quat_w', q[0])
+    rot.x = rospy.get_param('W_quat_x', q[1])
+    rot.y = rospy.get_param('W_quat_y', q[2])
+    rot.z = rospy.get_param('W_quat_z', q[3])
+    return rot
+
+
+def filter_function(pcl_arr):
+    """filter PCL data as needed
+
+    Args:
+        pcl_arr (np.ndarray): pcl data array (D x 4)
+    Returns:
+        np.ndarray: boolean masking array to filter outliers / undesired values
+    """
+    return np.where(np.logical_and.reduce((
+        x_min < pcl_arr[:, 0], pcl_arr[:, 0] < x_max,
+        y_min < pcl_arr[:, 1],pcl_arr[:, 1] < y_max,
+        z_min < pcl_arr[:, 2], pcl_arr[:, 2] < z_max
+        )))
+
+
+rospy.init_node('cam2WorldCaster')
+
+camera_static_broadcaster = tf2_ros.StaticTransformBroadcaster()
+transform_topic = rospy.get_param("transform_pcl_topic_name", "transform_pcl")
+raw_pcl_topic = rospy.get_param("raw_pcl_topic_name", "pcl_output")
+pub_hz = rospy.get_param("publish_rate", 2)
+ref_frame = rospy.get_param("reference_frame", "world")
+cam_frame = rospy.get_param("depth_camera_frame", "camera_depth_optical_frame")
+
+x_min = rospy.get_param("workspax/x_min", -0.2)
+y_min = rospy.get_param("workspax/y_min", -1.0)
+z_min = rospy.get_param("workspax/z_min", 0.01)
+x_max = rospy.get_param("workspax/x_max", 1.0)
+y_max = rospy.get_param("workspax/y_max", 1.0)
+z_max = rospy.get_param("workspax/z_max", 1.0)
+
+
+@click.command(context_settings=dict(
+    ignore_unknown_options=True,
+    allow_extra_args=True,
+))
+@click.option("--pcl-topic", default=None,
+              help=f"Point cloud topic name. Defaults to {raw_pcl_topic}")
+@click.option("--publish-transform/--no-publish-transform", default=True,
+              help=f"Publish transformed PCL data to ROS (position only in {ref_frame} frame)")
+def run_cam_calibrator(pcl_topic, publish_transform):
+    """Simple Depth camera calibration handler
+
+    Mainly serves to add a static tf2-ros broadcaster to ROS that adds the
+    transformation from base reference frame (usually world) to the camera frame
+
+    If the publish-transform flag is set, this node further transformes the point cloud data from the camera
+    frame to the world frame to spare this step in arbitrary modules.
+
+    Note:
+        Doing this in python is inefficient, stupid and inexplicably low performant.
+        This should be run in a dedicated perception pipeline.
+    """
+    if pcl_topic is None:
+        pcl_topic = raw_pcl_topic
+
+    W_T_C_msg = TransformStamped()
+    W_T_C_msg.header.stamp = rospy.Time.now()
+    W_T_C_msg.header.frame_id = ref_frame
+    W_T_C_msg.child_frame_id = cam_frame
+    W_T_C_msg.transform.translation = get_camera_translation()
+    W_T_C_msg.transform.rotation = get_camera_rotation()
+    camera_static_broadcaster.sendTransform(W_T_C_msg)
+    if publish_transform:
+        rospy.loginfo("publishing transformed PCL data in frame %s instead of %s", ref_frame, cam_frame)
+        rate = rospy.Rate(pub_hz)
+        pcl_handle = PclData(pcl_topic)
+        world_pcl_pub = rospy.Publisher(transform_topic, PointCloud2, queue_size=100)
+        pcl_handle.set_static_transform(get_camera_rotation(), np.array(get_trans_params()))
+
+        while not rospy.is_shutdown():
+            if pcl_handle.received_data and publish_transform:
+                world_pcl_pub.publish(pcl_handle.get_calibrated_msg(filter_function))
+            rate.sleep()
+    else:
+        rospy.spin()
+
+
+if __name__ == "__main__":
+    run_cam_calibrator()
+

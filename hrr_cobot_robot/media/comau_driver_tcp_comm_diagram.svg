@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="308px" preserveAspectRatio="none" style="width:710px;height:308px;" version="1.1" viewBox="0 0 710 308" width="710px" zoomAndPan="magnify"><defs><filter height="300%" id="ffagr4a4r58wt" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[07842434c206b76b2e2dbbdc8e28a11d]
+cluster cmDriver--><polygon fill="#FFFFFF" filter="url(#ffagr4a4r58wt)" points="16,6,129,6,136,28.2969,693,28.2969,693,301,16,301,16,6" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="16" x2="136" y1="28.2969" y2="28.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="107" x="20" y="20.9951">Comau Driver</text><!--MD5=[16fed41cd80f615fa78da8269e33480a]
+cluster cmTCP--><polygon fill="#FFFFFF" filter="url(#ffagr4a4r58wt)" points="391,53,563,53,570,75.2969,669,75.2969,669,277,391,277,391,53" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="391" x2="570" y1="75.2969" y2="75.2969"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="166" x="395" y="67.9951">Comau TCP Interface</text><!--MD5=[c47849c0ef1ba5fc7274f4199b091b50]
+cluster COMAU Robot--><polygon fill="#FFFFFF" filter="url(#ffagr4a4r58wt)" points="40,59,50,49,367,49,367,266,357,276,40,276,40,59" style="stroke:#000000;stroke-width:1.5;"/><line style="stroke:#000000;stroke-width:1.5;" x1="357" x2="367" y1="59" y2="49"/><line style="stroke:#000000;stroke-width:1.5;" x1="40" x2="357" y1="59" y2="59"/><line style="stroke:#000000;stroke-width:1.5;" x1="357" x2="357" y1="59" y2="276"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing" textLength="109" x="145" y="74.9951">COMAU Robot</text><!--MD5=[3b6d8ea62e6741fac15b3452b9e4c9e4]
+class tcp_base--><rect codeLine="11" fill="#FEFECE" filter="url(#ffagr4a4r58wt)" height="48" id="tcp_base" style="stroke:#A80036;stroke-width:1.5;" width="141" x="459.5" y="88"/><ellipse cx="474.5" cy="104" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M477.4688,109.6406 Q476.8906,109.9375 476.25,110.0781 Q475.6094,110.2344 474.9063,110.2344 Q472.4063,110.2344 471.0781,108.5938 Q469.7656,106.9375 469.7656,103.8125 Q469.7656,100.6875 471.0781,99.0313 Q472.4063,97.375 474.9063,97.375 Q475.6094,97.375 476.25,97.5313 Q476.9063,97.6875 477.4688,97.9844 L477.4688,100.7031 Q476.8438,100.125 476.25,99.8594 Q475.6563,99.5781 475.0313,99.5781 Q473.6875,99.5781 473,100.6563 Q472.3125,101.7188 472.3125,103.8125 Q472.3125,105.9063 473,106.9844 Q473.6875,108.0469 475.0313,108.0469 Q475.6563,108.0469 476.25,107.7813 Q476.8438,107.5 477.4688,106.9219 L477.4688,109.6406 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="109" x="488.5" y="108.1543">ComauClientBase</text><line style="stroke:#A80036;stroke-width:1.5;" x1="460.5" x2="599.5" y1="120" y2="120"/><line style="stroke:#A80036;stroke-width:1.5;" x1="460.5" x2="599.5" y1="128" y2="128"/><!--MD5=[cebac9bd02bbe54795fa698c709857ef]
+class tcp_state--><rect codeLine="12" fill="#FEFECE" filter="url(#ffagr4a4r58wt)" height="48" id="tcp_state" style="stroke:#A80036;stroke-width:1.5;" width="101" x="551.5" y="213"/><ellipse cx="566.5" cy="229" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M569.4688,234.6406 Q568.8906,234.9375 568.25,235.0781 Q567.6094,235.2344 566.9063,235.2344 Q564.4063,235.2344 563.0781,233.5938 Q561.7656,231.9375 561.7656,228.8125 Q561.7656,225.6875 563.0781,224.0313 Q564.4063,222.375 566.9063,222.375 Q567.6094,222.375 568.25,222.5313 Q568.9063,222.6875 569.4688,222.9844 L569.4688,225.7031 Q568.8438,225.125 568.25,224.8594 Q567.6563,224.5781 567.0313,224.5781 Q565.6875,224.5781 565,225.6563 Q564.3125,226.7188 564.3125,228.8125 Q564.3125,230.9063 565,231.9844 Q565.6875,233.0469 567.0313,233.0469 Q567.6563,233.0469 568.25,232.7813 Q568.8438,232.5 569.4688,231.9219 L569.4688,234.6406 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="69" x="580.5" y="233.1543">StateClient</text><line style="stroke:#A80036;stroke-width:1.5;" x1="552.5" x2="651.5" y1="245" y2="245"/><line style="stroke:#A80036;stroke-width:1.5;" x1="552.5" x2="651.5" y1="253" y2="253"/><!--MD5=[bdf66f4d2de61556aa2104ab0a6cb9f8]
+class tcp_motion--><rect codeLine="13" fill="#FEFECE" filter="url(#ffagr4a4r58wt)" height="48" id="tcp_motion" style="stroke:#A80036;stroke-width:1.5;" width="109" x="407.5" y="213"/><ellipse cx="422.5" cy="229" fill="#ADD1B2" rx="11" ry="11" style="stroke:#A80036;stroke-width:1.0;"/><path d="M425.4688,234.6406 Q424.8906,234.9375 424.25,235.0781 Q423.6094,235.2344 422.9063,235.2344 Q420.4063,235.2344 419.0781,233.5938 Q417.7656,231.9375 417.7656,228.8125 Q417.7656,225.6875 419.0781,224.0313 Q420.4063,222.375 422.9063,222.375 Q423.6094,222.375 424.25,222.5313 Q424.9063,222.6875 425.4688,222.9844 L425.4688,225.7031 Q424.8438,225.125 424.25,224.8594 Q423.6563,224.5781 423.0313,224.5781 Q421.6875,224.5781 421,225.6563 Q420.3125,226.7188 420.3125,228.8125 Q420.3125,230.9063 421,231.9844 Q421.6875,233.0469 423.0313,233.0469 Q423.6563,233.0469 424.25,232.7813 Q424.8438,232.5 425.4688,231.9219 L425.4688,234.6406 Z " fill="#000000"/><text fill="#000000" font-family="sans-serif" font-size="12" lengthAdjust="spacing" textLength="77" x="436.5" y="233.1543">MotionClient</text><line style="stroke:#A80036;stroke-width:1.5;" x1="408.5" x2="515.5" y1="245" y2="245"/><line style="stroke:#A80036;stroke-width:1.5;" x1="408.5" x2="515.5" y1="253" y2="253"/><!--MD5=[fb2970c5fae490b4d35041c0b48b6207]
+entity motion_handler--><rect fill="#FEFECE" filter="url(#ffagr4a4r58wt)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="196" x="56" y="214"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="232" y="219"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="230" y="221"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="230" y="225"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="156" x="71" y="246.9951">motion_handler(HOLD)</text><!--MD5=[26f12c5ae7fa85c9898c2f6425efda48]
+entity state_server--><rect fill="#FEFECE" filter="url(#ffagr4a4r58wt)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="122" x="229" y="89"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="331" y="94"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="329" y="96"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="329" y="100"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="82" x="244" y="121.9951">state server</text><!--MD5=[893fdfca42c2b1abf5514ff4d7cfd06a]
+entity motion_server--><rect fill="#FEFECE" filter="url(#ffagr4a4r58wt)" height="46.2969" style="stroke:#A80036;stroke-width:1.5;" width="138" x="56" y="89"/><rect fill="#FEFECE" height="10" style="stroke:#A80036;stroke-width:1.5;" width="15" x="174" y="94"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="172" y="96"/><rect fill="#FEFECE" height="2" style="stroke:#A80036;stroke-width:1.5;" width="4" x="172" y="100"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="98" x="71" y="121.9951">motion_server</text><!--MD5=[e609ff5ea3b0fc84c0caf9b97a0ede37]
+link tcp_base to tcp_state--><path codeLine="15" d="M551.2,149.21 C560.53,165.16 571.48,183.86 580.81,199.8 " fill="none" id="tcp_base-tcp_state" style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><ellipse cx="584.4748" cy="206.0681" fill="#FFFFFF" rx="8" ry="8" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="580.4297" x2="588.52" y1="199.1661" y2="212.97"/><line style="stroke:#A80036;stroke-width:1.0;" x1="591.3768" x2="577.5729" y1="202.0229" y2="210.1132"/><polygon fill="#A80036" points="543.54,136.14,544.6318,145.9282,546.0647,140.4558,551.5371,141.8887,543.54,136.14" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="546.0647" x2="551.12" y1="140.4558" y2="149.08"/><!--MD5=[02aa81c49b83b4d2ff900c597942e2f8]
+link tcp_base to tcp_motion--><path codeLine="16" d="M509.82,149.51 C501.11,165.25 490.95,183.63 482.24,199.39 " fill="none" id="tcp_base-tcp_motion" style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><ellipse cx="478.6003" cy="205.9685" fill="#FFFFFF" rx="8" ry="8" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="482.4705" x2="474.73" y1="198.967" y2="212.97"/><line style="stroke:#A80036;stroke-width:1.0;" x1="485.6018" x2="471.5987" y1="209.8387" y2="202.0982"/><polygon fill="#A80036" points="517.21,136.14,509.3552,142.0816,514.7911,140.5159,516.3567,145.9518,517.21,136.14" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="514.7911" x2="509.955" y1="140.5159" y2="149.26"/><!--MD5=[63076c6c74572861be5f7622e1f5f116]
+link motion_server to motion_handler--><path codeLine="23" d="M130.25,135.27 C135.12,155.91 142.37,186.66 147.58,208.75 " fill="none" id="motion_server-to-motion_handler" style="stroke:#A80036;stroke-width:1.0;stroke-dasharray:7.0,7.0;"/><polygon fill="#A80036" points="148.79,213.89,150.5954,204.208,147.6313,209.0261,142.8132,206.062,148.79,213.89" style="stroke:#A80036;stroke-width:1.0;"/><!--MD5=[b55fc0fd69a0c4715ca025c0944e32cc]
+link state_server to tcp_state--><path codeLine="26" d="M357.3061,139.5252 C357.3061,139.5252 486.99,190.66 539.33,211.29 " fill="none" id="state_server-tcp_state" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="551.47,216.08,544.5605,209.0616,546.8174,214.2487,541.6303,216.5057,551.47,216.08" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="546.8174" x2="539.375" y1="214.2487" y2="211.31"/><polygon fill="#A80036" points="346.14,135.13,350.258,141.0496,357.3061,139.5252,353.1881,133.6055,346.14,135.13" style="stroke:#A80036;stroke-width:1.0;"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="46" x="465" y="179.0669">receive</text><!--MD5=[f60ba73b002b6a2808c0aebf7579a60d]
+link motion_server to tcp_motion--><path codeLine="27" d="M197.86,139.59 C256.41,160.96 396.1471,211.9664 396.1471,211.9664 " fill="none" id="motion_server-tcp_motion" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="407.42,216.08,403.1548,210.2656,396.1471,211.9664,400.4123,217.7808,407.42,216.08" style="stroke:#A80036;stroke-width:1.0;"/><polygon fill="#A80036" points="185.64,135.13,192.7209,141.9755,190.3364,136.8458,195.4661,134.4613,185.64,135.13" style="stroke:#A80036;stroke-width:1.0;"/><line style="stroke:#A80036;stroke-width:1.0;" x1="190.3364" x2="197.85" y1="136.8458" y2="139.59"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="31" x="314" y="179.0669">send</text><!--MD5=[a8f79a3a39cfd03af99f35ab6c59624b]
+@startuml comau_driver_tcp_comm_diagram
+  skinparam componentStyle uml2
+  allow_mixing
+  skinparam defaultTextAlignment center
+
+'   left to right direction
+
+  package "Comau Driver" as cmDriver <<Folder>> {
+    
+
+    package "Comau TCP Interface" as cmTCP <<Folder>> {        
+        class "ComauClientBase" as tcp_base
+        class "StateClient" as tcp_state
+        class "MotionClient" as tcp_motion
+        
+        tcp_base <..+ tcp_state
+        tcp_base <..+ tcp_motion
+    }
+ 
+    node "COMAU Robot" {
+            component "motion_handler(HOLD)" as motion_handler
+            component "state server" as state_server
+            component "motion_server" as motion_server
+            motion_server ..> motion_handler
+     
+    }
+    state_server *- -> tcp_state : receive
+    motion_server <- -* tcp_motion : send    
+  }
+
+
+
+  
+  @enduml
+
+@startuml comau_driver_tcp_comm_diagram
+  skinparam componentStyle uml2
+  allow_mixing
+  skinparam defaultTextAlignment center
+
+
+  package "Comau Driver" as cmDriver <<Folder>> {
+    
+
+    package "Comau TCP Interface" as cmTCP <<Folder>> {        
+        class "ComauClientBase" as tcp_base
+        class "StateClient" as tcp_state
+        class "MotionClient" as tcp_motion
+        
+        tcp_base <..+ tcp_state
+        tcp_base <..+ tcp_motion
+    }
+ 
+    node "COMAU Robot" {
+            component "motion_handler(HOLD)" as motion_handler
+            component "state server" as state_server
+            component "motion_server" as motion_server
+            motion_server ..> motion_handler
+     
+    }
+    state_server *- -> tcp_state : receive
+    motion_server <- -* tcp_motion : send    
+  }
+
+
+
+  
+  @enduml
+
+PlantUML version 1.2021.00(Sun Jan 10 11:25:05 CET 2021)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

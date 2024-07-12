@@ -1,0 +1,32 @@
+- surface_normal_start:
+  - !!python/object/new:geometry_msgs.msg._Vector3Stamped.Vector3Stamped
+    state:
+    - !!python/object/new:std_msgs.msg._Header.Header
+      state:
+      - 0
+      - !!python/object/new:genpy.rostime.Time
+        state:
+        - 1647540096
+        - 232148885
+      - base_link
+    - !!python/object/new:geometry_msgs.msg._Vector3.Vector3
+      state:
+      - -0.03486669232992838
+      - -0.0021259171724595793
+      - 0.9993897108946769
+- surface_normal_end:
+  - !!python/object/new:geometry_msgs.msg._Vector3Stamped.Vector3Stamped
+    state:
+    - !!python/object/new:std_msgs.msg._Header.Header
+      state:
+      - 0
+      - !!python/object/new:genpy.rostime.Time
+        state:
+        - 1647540096
+        - 234705924
+      - base_link
+    - !!python/object/new:geometry_msgs.msg._Vector3.Vector3
+      state:
+      - -0.03486669232992838
+      - -0.0021259171724595793
+      - 0.9993897108946769

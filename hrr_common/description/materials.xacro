@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="hrr-cobot-base">  
+  
+  <material name="hrr_orange">
+    <color rgba="${255/255} ${108/255} ${10/255} 1.0"/>
+  </material>
+
+  <material name="hrr_cyan_green">
+    <color rgba="${37/255} ${172/255} ${147/255} 1.0"/>
+  </material>
+
+  <material name="hrr_black">
+    <color rgba="0.0 0.0 0.0 1.0"/>
+  </material>
+
+    <material name="hrr_silver">
+         <color rgba="0.5 0.5 0.5 1.0"/>
+  </material>
+
+  <material name="hrr_dblue">
+    <color rgba="${37/255} ${90/255} ${147/255} 1.0"/>
+  </material>
+
+  <material name="hrr_pink">
+    <color rgba="${255/255} ${0/255} ${155/255} 1.0"/>
+  </material>
+
+
+</robot>

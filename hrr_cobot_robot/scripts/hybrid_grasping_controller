@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""
+Compliant Control via DSA data
+-------------------------------------------
+
+Simple demo script without any further benefit
+"""
+import sys
+import numpy as np
+# ROS
+import rospy
+
+from hrr_cobot_robot.ros_nodes_click_commands import compliant_cobot_DSA_control
+
+# set printing and plotting options
+np.set_printoptions(precision=5, suppress=True)
+
+# ROS INIT
+rospy.init_node("hrr_cobot_compliant_dsa_control")
+
+compliant_cobot_DSA_control()

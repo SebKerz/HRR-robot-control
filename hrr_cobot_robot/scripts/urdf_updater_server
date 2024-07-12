@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+import rospy
+import sys
+
+from hrr_cobot_robot.ros_nodes_click_commands import update_tool_URDF_server
+
+rospy.init_node("update_tool_urdf_server")
+
+if update_tool_URDF_server():
+    sys.exit(1)
+sys.exit(0)

@@ -1,0 +1,4 @@
+TIMEOUT = -2
+ERROR = -1
+DEFAULT = 0
+SUCCESS = 1

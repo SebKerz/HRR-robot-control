@@ -1,0 +1,23 @@
+# goal definition
+string calibration_file
+string data_file
+float32 q4_dot_des
+float32 q5_dot_des
+float32 q6_dot_des
+float32 scale_q4
+float32 scale_q5
+float32 scale_q6
+bool recalibrate
+bool keep_current_pose
+---
+# result
+geometry_msgs/Wrench bias
+geometry_msgs/Wrench noise
+geometry_msgs/Vector3 tool_grav
+geometry_msgs/Vector3 tool_com
+string calibration_file
+---
+# feedback
+string step
+string tool
+int32 data_size

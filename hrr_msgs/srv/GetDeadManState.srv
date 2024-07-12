@@ -1,0 +1,6 @@
+# safety service requesting current ROS-deadman signal:
+# alive representing the 'virtual' ROS 'deadman' switch being enabled 
+# time being the latest time an alive signal was received.
+---
+bool alive
+time latest_feedback

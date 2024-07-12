@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!--
+  Start Gazebo environment
+  
+  - loads gazebo environment with required flags
+  - optionally start rviz with rviz file as needed
+  
+-->
+<launch>
+ <arg name="use_gz"       default="true"  doc="start gzclient"/>
+ <arg name="use_rviz"     default="true"  doc="start rviz"/>
+ <arg name="use_sim_time" default="true"  doc="use simulation time as system time"/>
+ <arg name="world"        default="worlds/empty.world" doc="sim world name in racer5_sim/worlds" /> 
+ <arg name="paused"       default="false" doc="Starts gazebo in paused mode" />
+ <arg name="verbose"      default="true" doc="starts gazebo with verbose logging" />
+ <arg name="rviz_name"    default="$(find hrr_common)/rviz/hrr_cobot_sim.rviz" doc="rviz file name" />
+
+ <!-- launch gazebo world --> 
+ <include file="$(find gazebo_ros)/launch/empty_world.launch">
+  <arg name="world_name" value="$(arg world)"/>
+  <arg name="paused" value="$(arg paused)" />
+  <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+  <arg name="gui" value="$(arg use_gz)"/>		
+  <arg name="headless" value="false"/>
+  <arg name="debug" value="false"/>
+  <arg name="verbose" value="$(arg verbose)"/>
+ </include>
+
+ <!-- launch rviz -->
+ <include if="$(arg use_rviz)" file="$(find hrr_common)/launch/rviz.launch">
+  <arg name="rviz_file" value="$(arg rviz_name)"/>
+ </include>
+</launch>

@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+"""
+since v0.1.4, this file can be used to start a standalone ROS-node and debug
+a ROS-action service e.g. from pycharm / vscode (with proper plugins)
+"""
+
+import rospy
+import sys
+
+from hrr_cobot_robot.ros_nodes_click_commands import ft_sensor_calibrator
+
+rospy.init_node("ft_calibrator")
+
+if ft_sensor_calibrator():
+    sys.exit(1)
+sys.exit(0)

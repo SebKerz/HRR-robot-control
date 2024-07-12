@@ -1,0 +1,69 @@
+# NOTE: URDF-PREFIX UPDATE
+# --- URDF prefix sensitive variables
+base_link_name: &base_link_name base_link
+sns_frame: &sns_frame tcp_controller
+ee_link: &ee_link ee_link
+ft_link: &ft_link jr3msr
+ft_joint: &ft_joint jr3msr_joint
+# ---
+#cobot parameters
+cobot_ns:  &cobot_ns hrr_cobot
+name: hrr_cobot
+# link names
+joints: &joint_names
+  - joint_1
+  - joint_2
+  - joint_3
+  - joint_4
+  - joint_5
+  - joint_6
+# Settings for core ros driver
+loop_hz: &robot_hz 200
+robot_hw_name: hrr_cobot
+# adjust sensor and tool namespaces
+ft_sensor_ns: ft_sensor
+gripper_ns: gripper
+# Settings for core ros driver
+loop_hz: 200
+cartesian_hw_handle_name: tcp_controller
+cycle_time_error_threshold: 0.002
+max_dt_velocity_approximation: 0.05
+# flags in use
+use_arm_server: true
+use_robot_server: true
+use_state_server: true
+use_services: false
+use_difference_velocity_estimation: true
+publish_states_from_driver: false
+verbose_pdl: false
+control_ios: true
+update_sns_params: false
+# Movefly parameters 
+lin_velocity: 0.2
+fly_dist: 5.0
+threshold: 0.2 # how often to publish movefly commands
+# Sensor tracking parameters
+sensor_type: 7    # 5-9 relative , 10-13 absolute
+sensor_cnvrsn: 1
+sensor_gain: 50
+sensor_time: 5
+sensor_offset_lim_trans: 5000
+sensor_offset_lim_rot: 8000
+set_move_fly_service_name: set_move_fly_params
+set_sensor_track_params_service_name: set_sensor_tracking_params
+set_digital_io_service_name: set_digital_io
+set_arm_state_service_name: set_arm_state
+get_comau_parameter_service_name: get_comau_parameters
+
+ft_sensor:
+  hw_plugin: jr3/JR3Sensor
+  hw_name: &topic_name ft_sensor
+  frame_id: *ft_link
+  pub_hz: 1000.0
+  topic_name: "msr_raw"
+  board_number: 0
+  flip_x_axis: true
+  filter_number: 1
+  reset_on_start: false
+  ft_topic_name: *topic_name
+  sensor_joint_name: *ft_joint

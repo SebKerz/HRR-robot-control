@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="hrr-cobot">
+  <!-- common stuff -->
+  
+  <xacro:include filename="$(find hrr_common)/description/sim_common.xacro"/>
+  
+  <!--load racer5-cobot sim -->
+
+  <xacro:include filename="$(find comau_description)/urdf/racer5-cobot/racer5-cobot.urdf.xacro" />
+  <xacro:include filename="$(find comau_description)/urdf/racer5-cobot/racer5-cobot.transmission.xacro" />
+  <xacro:include filename="$(find comau_description)/urdf/racer5-cobot/racer5-cobot.gazebo.xacro" />
+  
+  
+  <xacro:racer5-cobot_robot prefix="$(arg robot_prefix)"/>
+  <xacro:racer5-cobot_transmission prefix="$(arg robot_prefix)" hw_interface="$(arg transmission_hw_interface)" />  
+  <xacro:racer5-cobot_gazebo prefix="$(arg robot_prefix)"/>
+  
+</robot>

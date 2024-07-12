@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="hrr_tool">
+
+   <xacro:property name="PI" value="3.1415926535897931"/>
+
+   <xacro:include filename="$(find hrr_ee_tools)/description/screwdriver.xacro"/>
+   <xacro:include filename="$(find hrr_ee_tools)/description/shaftgrinder.xacro"/>
+   <xacro:include filename="$(find hrr_ee_tools)/description/vacuum.xacro"/>
+   <xacro:include filename="$(find hrr_ee_tools)/description/toolchanger.xacro"/>
+   <xacro:include filename="$(find hrr_common)/description/connectors/connector_gripper_silver.xacro"/>
+   <xacro:include filename="$(find wsg_50_description)/model/wsg_50.urdf.xacro"/>
+
+   <xacro:arg name="tool_type"  default="0"/>
+   <xacro:arg name="robot_prefix" default=""/>
+
+   <link name="$(arg robot_prefix)connect"/>
+
+   <!-- 3 => Shaftgrinder -->
+   <xacro:if value="$(eval ${tool_type} == 3)">
+      <xacro:shaftgrinder parent="$(arg robot_prefix)connect" prefix="${robot_prefix}"/>
+   </xacro:if>
+
+   <!-- 4 => screwdriver -->
+   <xacro:if value="$(eval ${tool_type} == 4)">
+      <xacro:screwdriver parent="$(arg robot_prefix)connect" prefix="$(arg robot_prefix)"/>
+   </xacro:if>
+
+   <!-- 5 => vacuum -->
+   <xacro:if value="$(eval arg('tool_typ') == 5)">
+      <xacro:vacuum parent="$(arg robot_prefix)connect" prefix="$(arg robot_prefix)"/>
+   </xacro:if>
+
+</robot>

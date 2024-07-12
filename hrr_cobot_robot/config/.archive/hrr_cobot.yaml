@@ -1,0 +1,81 @@
+# --- URDF prefix sensitive variables
+base_link_name: &base_link_name base_link
+sns_frame: &sns_frame tcp_controller
+ee_link: &ee_link ee_link
+ft_link: &ft_link jr3msr
+# ---
+#cobot parameters
+cobot_ns:  &cobot_ns hrr_cobot
+name: hrr_cobot
+# link names
+joint_names: &joint_names
+  - joint_1
+  - joint_2
+  - joint_3
+  - joint_4
+  - joint_5
+  - joint_6
+
+# cobot interface parameters
+v_max: 0.01
+omega_max: 0.1
+read_ft: True
+read_tp5: True
+cmd_arduino: False
+cmd_sns_vel: True
+cmd_sns_compl: False
+cmd_*joint_handler: True
+cmd_robot_io: True
+
+## ee-tools parameters
+gripper_alignment_ctrl_loop_hz:  50
+integral_window_size:  50
+ee_tool_translation: [0.0, 0.0, 0.0]
+rpy_ft_yaw: -2.356194490192345
+rpy_gripper_yaw: -1.5707963267948966
+tool_name: nothing
+
+# cobot-name sensitive parameters
+joint_state_topic_name: /hrr_cobot/joint_states
+controller_manager_ns: /hrr_cobot/controller_manager
+ft_sensor_topic_name:  /hrr_cobot/ft_sensor
+arduino_node_name:     /hrr_cobot/tool_controller
+
+# controller topic names -> depends on cobot-name and dedicated controller name (see above)
+sns_trk_topic_name:  /hrr_cobot/sensor_track_velocity_controller/tcp_v_cmd
+tp5_topic_name:      /hrr_cobot/comau_robot_state_controller/comau_cartesian_data
+control_select_topic_name: /hrr_cobot/sensor_track_compliant_controller/S
+cmd_topic_name:            /hrr_cobot/sensor_track_compliant_controller/hybrid_ctrl_cmd
+ft_ack_srv_name:           /hrr_cobot/sensor_track_compliant_controller/acknowledge_calibration
+gain_cfg_name:             /hrr_cobot
+joint_trajectory_action_topic_name:  /hrr_cobot/*joint_trajectory_handler/comau_*joint_trajectory_handler
+
+# WSG 50 gripper (remaining parameters to be found in ``wsg_50_yaml``
+gripper_ns: /hrr_cobot/gripper
+
+# action names
+change_tool_action_srv_name:  /hrr_cobot/skills/change_tool
+cutting_action_srv_name:   /hrr_cobot/skills/cutting
+grinding_action_srv_name:  /hrr_cobot/skills/grinding
+hammering_action_srv_name:  /hrr_cobot/skills/hammering
+levering_action_srv_name:    /hrr_cobot/skills/levering
+pc_opening_action_srv_name: /hrr_cobot/skills/pc_opening
+sensitive_grasping_action_srv_name:  /hrr_cobot/skills/sensitive_grasping
+unscrew_action_srv_name:  /hrr_cobot/skills/unscrew
+vacuum_pick_place_action_srv_name:   /hrr_cobot/skills/pick_place_vacuum
+
+#Get and set pin service names
+get_comau_parameters_service_name: /hrr_cobot/get_comau_parameters
+set_comau_dout_pin_service_name: /hrr_cobot/set_digital_io
+tool_changer_pin: 5
+
+# Motion Planner topic / service names
+motion_planner_trajectory_topic: /hrr_cobot/motion_planner/*joint_trajectory
+motion_planner_*joint_goal_topic: /hrr_cobot/motion_planner/*joint_goal
+motion_planner_goal_pose_topic: /hrr_cobot/motion_planner/goal_pose
+call_joint_trajectory_planner_service: /hrr_cobot/motion_planner/plan_joint_trajectory
+call_cartesian_trajectory_planner_service: /hrr_cobot/motion_planner/plan_trajectory_to_pose
+
+
+# general pipeline params
+restart_sleep_time: 1.0

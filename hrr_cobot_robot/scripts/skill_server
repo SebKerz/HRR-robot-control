@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""
+Run all skills from single node
+
+Todo:
+    adjust pilot IP
+"""
+import os
+import rospy
+import numpy as np
+
+import hrr_common
+from hrr_cobot_robot.ros_nodes_click_commands import skill_server
+
+if hrr_common.in_tum_lab():
+    hrr_common.set_ros_environment("129.187.147.221")
+   # hrr_common.set_ros_environment("129.187.147.129") #external vision PC
+    #hrr_common.set_ros_environment("hrrcobotLinux54")
+    # os.environ["HRR_SHAFTGRINDER_HACK"] = 'because_fuck_you'
+    os.environ["HRR_QUICK_HACK"] = '1'
+else:
+    # adjust as needed
+    hrr_common.set_ros_environment("127.0.0.1")
+    #hrr_common.set_ros_environment("192.168.2.28")
+    try:
+        os.environ["HRR_SHAFTGRINDER_HACK"] = ''
+    except KeyError:
+        pass
+
+
+np.set_printoptions(suppress=True, precision=3)
+
+if __name__ == "__main__":
+    rospy.init_node("skill_server")
+    skill_server()

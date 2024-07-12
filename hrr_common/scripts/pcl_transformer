@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+"""
+Transform hacker for the perception / action loop of TUM and CERTH
+data:    05.2021
+author:  v.gabler@tum.de
+"""
+import rospy
+import tf2_ros
+import numpy as np
+import quaternion
+from geometry_msgs.msg import *
+
+rospy.init_node('pcl_camera_world_bridge_hack')
+tf_buffer = tf2_ros.Buffer()
+tf_listener = tf2_ros.TransformListener(tf_buffer)
+
+
+def get_transform(camera_frame="camera_depth_optical_frame", num_trials=100, ts=1e-3, buffer=tf_buffer):
+    if camera_frame[0] == "/":
+        camera_frame = camera_frame[1:]
+    for _ in range(num_trials):
+        try:
+            trans_msg = buffer.lookup_transform("world", camera_frame, rospy.Time(0))
+            t = trans_msg.transform
+            return (np.r_[t.translation.x, t.translation.y, t.translation.z],
+                    np.quaternion(t.rotation.w, t.rotation.x, t.rotation.y, t.rotation.z))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.sleep(ts)
+    rospy.logerr("failed to check transformation from %s to world frame", camera_frame)
+    return np.zeros(3), np.quaternion(1., 0., 0., 0.)
+
+
+def transform_camera_point(x, cam_frame="camera_depth_optical_frame"):
+    p, q_W_C = get_transform(cam_frame)
+    R_W_C = quaternion.as_rotation_matrix(q_W_C)
+    return R_W_C @ x + p
+
+
+class Transformer:
+
+    def __init__(self, polygon='polygon_msg', center="point_msg"):
+        self.point_subs = rospy.Subscriber(center, PointStamped, self._point_cb)
+        self.pol_subs = rospy.Subscriber(polygon, PolygonStamped, self._polygon_cb)
+        self.point_pub = rospy.Publisher(center + "_world", PointStamped, queue_size=100)
+        self.pol_pub = rospy.Publisher(polygon + "_world", PolygonStamped, queue_size=100)
+
+    @staticmethod
+    def transform_point(p, frame_id):
+        # type: (Point, str) -> Point
+        W_p = transform_camera_point(np.r_[p.x, p.y, p.z],
+                                     cam_frame=frame_id)
+        return Point(*W_p)
+
+    def _point_cb(self, msg):
+        p_msg = PointStamped()
+        p_msg.header.frame_id = "world"
+        p_msg.header.stamp = rospy.get_rostime()
+        p_msg.point = self.transform_point(msg.point, msg.header.frame_id)
+        self.point_pub.publish(p_msg)
+
+    def _polygon_cb(self, msg):
+        p_msg = PolygonStamped()
+        p_msg.header.frame_id = "world"
+        p_msg.header.stamp = rospy.get_rostime()
+        for p in msg.polygon.points:
+            p_msg.polygon.points.append(self.transform_point(p, msg.header.frame_id))
+        self.pol_pub.publish(p_msg)
+
+
+Hacker = Transformer()
+rospy.spin()

@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!-- Offline Camera calibrator
+    without rosbags
+--> 
+<launch>
+    <!-- arguments -->
+    <node name="cam_calibrator" pkg="hrr_common" type="cam_calibrator" 
+        respawn="true" output="screen" args="--pcl-topic /voxel_grid/output">
+   </node>
+
+    <node name="pcl_transformer" pkg="hrr_common" type="pcl_transformer" 
+        respawn="true" output="screen">
+    </node>
+
+
+
+  <include file="$(find hrr_common)/launch/rviz.launch">
+    <arg name="rviz_file" value="$(find hrr_common)/rviz/hrr_cobot_hw_pcl.rviz"/>
+  </include>
+ 
+</launch>

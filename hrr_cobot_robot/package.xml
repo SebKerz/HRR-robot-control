@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>hrr_cobot_robot</name>
+  <version>0.4.0</version>
+  <description>HR Recycler Cobot Hardware package</description>
+
+  <author email="hr-recycler@lsr.ei.tum.de">HR-Recycler (TUM)</author>
+  <maintainer email="hr-recycler@lsr.ei.tum.de">HR-Recycler (TUM)</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <depend>comau_driver</depend> 
+  <depend>controller_manager</depend> 
+  <depend>force_torque_plugin</depend> 
+  <depend>hardware_interface</depend> 
+  <depend>hrr_common</depend>
+  <depend>hrr_controllers</depend>
+  <depend>hrr_msgs</depend> 
+  <depend>hr_recycler_msgs</depend>
+  <depend>pluginlib</depend> 
+  <depend>roscpp</depend>py ge
+  <depend>rosparam_shortcuts</depend> 
+  <depend>std_srvs</depend>   
+  <exec_depend>wsg_50_hw</exec_depend>  
+  <test_depend>rostest</test_depend>
+  <test_depend>rosunit</test_depend>
+  <export>
+  </export>
+</package>

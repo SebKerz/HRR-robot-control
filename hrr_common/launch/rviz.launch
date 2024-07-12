@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="rviz_file"	default="" doc="(optional) full path to rviz file"/>
+  <arg name="debug"     default="false" />  
+
+  <arg unless="$(arg debug)" name="launch_prefix" value="" />
+  <arg     if="$(arg debug)" name="launch_prefix" value="gdb --ex run --args" />
+
+  <group if="$(eval arg('rviz_file') == '')">
+    <node name="$(anon rviz)" launch-prefix="$(arg launch_prefix)" pkg="rviz" type="rviz" respawn="false" 
+          output="screen"/>
+  </group>
+
+  <group unless="$(eval arg('rviz_file') == '')">
+    <node name="$(anon rviz)" launch-prefix="$(arg launch_prefix)" pkg="rviz" type="rviz" respawn="false" 
+          output="screen" args="-d $(arg rviz_file)"/>
+  </group>
+
+</launch>

@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="shaftgrinder">
+
+
+  <xacro:macro name="shaftgrinder" params="parent prefix:=''">
+    <!-- Links /-->
+    <link name="${prefix}shaftgrinder_body">
+      <visual>
+        <geometry>
+          <mesh filename="package://hrr_ee_tools/meshes/shaftgrinder.stl"  scale="0.01 0.01 0.01" />
+        </geometry>
+         <material name="hrr_cyan_green"/>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://hrr_ee_tools/meshes/shaftgrinder.stl" scale="0.01 0.01 0.01" />
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="2.0"/>
+        <origin xyz="0 0 .015"/>
+        <inertia ixx="2." ixy="0.0" ixz="0.0" iyy="2." iyz="0.0" izz="2." />
+      </inertial>
+    </link>
+
+    <gazebo reference="${prefix}shaftgrinder_body">
+      <gravity>true</gravity>
+      <material>Gazebo/Green</material>
+    </gazebo>
+
+
+    <link name="${prefix}shaftgrinder_tip"/>
+
+    <joint name="${prefix}shaftgrinder_attach_joint" type="fixed">
+      <parent link="${parent}"/> <child link="${prefix}shaftgrinder_body"/>
+      <origin xyz="-0.0825 0.0  0.04" rpy="1.5707963267948966 0.0 1.57079632679"/>
+    </joint>
+
+    <joint name="${prefix}shaftgrinder_body_tip" type="fixed">
+      <origin xyz="0 0.003 0.23" rpy="0 0 0"/>
+      <parent link="${prefix}shaftgrinder_body"/>
+      <child link="${prefix}shaftgrinder_tip"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

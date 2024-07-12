@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>hrr_ee_tools</name>
+  <version>0.2.0</version>
+  <description>HR Recycler Cobot EE-Tools Package</description>
+
+  <author email="hr-recycler@lsr.ei.tum.de">HR-Recycler (TUM)</author>
+  <maintainer email="hr-recycler@lsr.ei.tum.de">HR-Recycler (TUM)</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>rosserial_arduino</exec_depend>
+
+  <export/>
+</package>

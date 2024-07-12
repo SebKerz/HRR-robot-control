@@ -1,0 +1,6 @@
+string receive_topic
+bool reset
+uint32 buffer_size
+------------
+geometry_msgs/Wrench sensor_bias
+bool sent

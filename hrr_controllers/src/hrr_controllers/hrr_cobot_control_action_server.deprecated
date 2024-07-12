@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+r"""
+HRR-Cobot Hybrid Force-Position Control Action Server
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Enable Force control along selected or all axes.
+
+Expected inputs from ROS
+*******************************
+
+* force selection vector (6 x 1)
+* velocity selection vector (6 x 1)
+* control gain vector (6 x 1)
+* velocity scaling term
+* rotation scaling term
+* desired force / torque (3 x 1) each
+* reference frame for compliance
+* timeout
+
+class Overview
+*********************
+
+Parameters per controller are listed in
+
+* :py:class:`~ControlSelector` as a basic Selection matrix handle
+* :py:class:`~ForceControlHandle` as the basic Cartesian Wrench control handle
+* :py:class:`~VelocityControlHandle` as the feed-forward velocity scaling handle
+
+These handles are finally collected in the :py:class:`~HybridCobotControl` class such that
+the action can be used to command arbitrary hybrid or non-hybrid action commands to the
+robot
+
+Action outcomes:
+
+* abort if action is not applicable (:py:meth:`~HybridCobotControl.applicable`), or measured wrench norm exceeds threshold
+* preempted if requested
+* succeeded if timeout is reached
+
+Note:
+    * this skill does not check for any success constraint but aborts if the error-term is violated
+
+Todo:
+    The class :py:class:`~HybridControl` and `~CompliantGrasping` should be implemented in C++ as action services.
+"""
+import numpy as np
+
+import actionlib
+import rospy
+from hrr_msgs.msg import (
+    HybridControlAction, HybridControlFeedback, HybridControlResult,
+)
+
+from hrr_common.utils import get_range
+from hrr_common.ros_utils import np2wrench
+
+from hrr_controllers.tmp.hybrid_control_handles import *
+
+__all__ = ["HybridCobotControl"]
+
+
+class HybridCobotControl(HrrCobotControl):
+    """
+    Hybrid Force / Position Control Handle>
+
+    This is the generic Hrr Cobot Action client that allows to command a hybrid force / position control profile...
+
+    Note:
+        ... and is best to be implemented in C++ but is available in python for now because
+
+        ... we can
+
+        ... and do not know any better
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super(HybridCobotControl, self).__init__(*args, **kwargs)
+        # ROS handles
+        self._as = None
+        self._feedback = HybridControlFeedback()
+        self._result = HybridControlResult()
+        self.F_success = 0.0
+        self._trange = True
+        self._action_name = ""
+
+    def init_ros(self, *args, action_name=None, prefix="~", **kwargs):
+        if action_name is not None:
+            self._action_name = action_name
+            self._as = actionlib.SimpleActionServer(f"{prefix}{action_name}", HybridControlAction,
+                                                    execute_cb=self.execute_cb, auto_start=False)
+        self._trange = rospy.get_param(f"{prefix}use_trange", self._trange)
+
+    def alive(self, msg):
+        if isinstance(msg, str) and len(msg) > 1:
+            rospy.logerr(msg)
+            self._as.set_aborted(self._result, msg)
+            return False
+        return True
+    
+    @property
+    def applicable(self):
+        """
+        Check if action service can be executed before starting
+        sets service as aborted if service is not possible to be executed
+
+        Returns:
+            bool: True, if current action is applicable.
+        """
+        msg = []
+        if np.linalg.norm(self.B_F_msr) == 0.0:
+            msg.append("ft-data is zero, stop execution!")
+        if self._sns_trk_vel_handle is None:
+            msg.append("current instance has no sensor-track velocity controller initialized")
+        self._sns_trk_vel_handle.activate()
+        if not self._sns_trk_vel_handle.active:
+            msg.append("failed on activating senor-track velocity controller")
+        return self.alive("\n".join(msg))
+    
+    def execute_cb(self, goal):
+        r"""
+        Run the hybrid control loop
+
+        #. check if applicable according to :py:meth:`~applicable`
+        #. parse action goal
+
+        Args:
+            goal(HybridControlGoal): action goal
+        Returns: 
+            int: state outcome as TIMEOUT, SUCCESS, ERROR, DEFAULT, where DEFAULT means a preempt request / abort.
+        """
+        t0 = rospy.get_time()
+        if self.applicable:
+            # parse goal data to member variables
+            rospy.logdebug(f"received new goal:\n{goal}")
+            msg = []
+            if goal.timeout == 0:
+                msg.append("timeout is 0. Canceling")
+            self._F_ctrl.S = goal.S_f
+            self._v_ctrl.S = goal.S_v
+            self._v_ctrl.B_v_des = goal.velocity_des.linear
+            self._v_ctrl.B_ω_des = goal.velocity_des.angular
+            T = int(goal.timeout // self.dt) + 1
+            self._F_ctrl.K_trans = goal.K_pos
+            self._F_ctrl.K_rot = goal.K_rot
+            if np.linalg.norm(self._F_ctrl.S_diag + self._v_ctrl.S_diag) == 0.:
+                msg.append(f"no strategy selected. S_F:={self._F_ctrl.S_diag}, S_v:={self._v_ctrl.S_diag}")
+            if not self._v_ctrl.valid:
+                msg.append(f"velocity control selection {self._v_ctrl.S_diag} contradicts " +
+                           f"steering direction {self._v_ctrl.B_v_des}, {self._v_ctrl.B_ω_des}")
+            if not self._F_ctrl.valid:
+                msg.append(f"force control selection {self._F_ctrl.S_diag} contradicts "
+                           f"gains {self._F_ctrl.K_pos_diag}, {self._F_ctrl.K_rot_diag}")
+            if goal.F_max > 0.0:
+                self.F_max = min(goal.F_max, 150.0)
+            if goal.F_success > 0.0:
+                self.F_success = goal.F_success
+            if self.alive("\n".join(msg)):
+                matrix_parser(self.B_F_des[0:3], goal.force_des, val_min=-0.7 * self.F_max, val_max=0.7 * self.F_max)
+                matrix_parser(self.B_F_des[3:6], goal.torque_des, val_min=-0.7 * self.F_max,
+                              val_max=0.7 * self.F_max)
+                # if np.any(self._f_ctrl.S_diag) > 0.0 and np.any(self._B_F_des > 0):
+                rospy.loginfo(f"set force control along {self._F_ctrl.S_diag} for F_des = {self.B_F_des} ")
+                # start actual loop
+                needs_end = True
+                for i in get_range(T, self._trange):
+                    # check constraints
+                    if np.linalg.norm(self.B_F_msr) > self.F_max:
+                        self._result.runtime = rospy.get_time() - t0
+                        assert not self.alive(f"force threshold of {self.F_max} violated as {self.B_F_msr} at {i}/{T}"), \
+                            "service canceling failed"
+                        needs_end = False
+                        break
+                    if self._as.is_preempt_requested():
+                        rospy.loginfo('[%s]: Preempted' % self._action_name)
+                        self._result.runtime = rospy.get_time() - t0
+                        self._as.set_preempted()
+                        needs_end = False
+                        break
+
+                    # actual loop step
+                    self._hybrid_force_vel_command()
+                    self._feedback.wrench_error = np2wrench(self.ɛ_F)
+                    self._as.publish_feedback(self._feedback)
+                    self._rate.sleep()
+
+                    # check for success constraints
+                    if (rospy.get_time() - t0) > goal.timeout:
+                        self._result.runtime = rospy.get_time() - t0
+                        rospy.logwarn(f"timeout reached before loop end at {i}/{T}")
+                        self._as.set_succeeded(self._result, "timeout reached")
+                        needs_end = False
+                        break
+                if needs_end:
+                    self._result.runtime = rospy.get_time() - t0
+                    self._as.set_succeeded(self._result, "timeout reached")
+        else:
+            self._as.set_aborted(self._result, "Action is not applicable")
+        self.reset()
+

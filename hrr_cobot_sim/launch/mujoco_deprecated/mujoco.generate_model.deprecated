@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+Prepare simulation data
+  Simulate a single Comau Racer 5 0.80 in Mujoco
+
+  Defaults provided for COMAU RACER 5 0.80:
+   - use_rviz: Enable rviz for visualization / debugging. Defaults to True.
+   - hw_if:  Changes the control interfaces for the simulated robot. Effort, Position or Velocity.
+
+-->
+<launch>
+  <arg name="robot_name" default="racer5" doc="robot name. Requires a hw_if_controllers_robot_name.yaml file to exist"/>
+  <arg name="hw_if" default="Effort"
+       doc="hardware interface. Possible selections: Position, Velocity or Effort "/>
+  <arg name="mujoco_model" default="mj_racer_cobot" doc="mujoco model (xml or xacro) name"/>
+  <arg name="mujoco_xml_path" default="/tmp" doc="path, where the xml is (or will be) saved"/>
+  <node  name="generate_xml"
+  	    pkg="racer5_sim" type="generate_xml" args="$(arg mujoco_model) $(find racer5_sim)/model $(arg mujoco_xml_path) "/>
+</launch>

@@ -1,0 +1,33 @@
+# --- URDF prefix sensitive variables
+wsg_base_link: &wsg_base_link wsg_50_base_link
+wsg_50_base_joint_gripper_left: &wsg_50_base_joint_gripper_left wsg_50_base_joint_gripper_left
+wsg_50_base_joint_gripper_right: &wsg_50_base_joint_gripper_right wsg_50_base_joint_gripper_right
+base_link_name: &base_link_name base_link
+ee_link_name: &ee_link_name ee_link
+tool_link_name: &tool_link_name wsg_50_tcp
+# ---
+com_mode: script
+frame_id: *wsg_base_link
+joint_names:
+  - *wsg_50_base_joint_gripper_left
+  - *wsg_50_base_joint_gripper_right
+loop_hz: 5.0
+port: 1000
+protocol: tcp
+publish_joints: true
+use_all_wsg_services: true
+use_dsa: true
+
+gripper_alignment_error_topic: alignment_error
+cmd_in_ee_frame: true
+u_v_max: 5e-3
+u_v_rot_max: 1e-2
+scale_velocity: true
+integral_window_size: 50
+
+# hrr cobot dependent ROS names
+# hybrid_grasping_controller:
+#   ft_ext_topic_name: /hrr_cobot/ft_calibrator/B_F_ext
+#   u_v_cmd_topic: /hrr_cobot/gripper/vel_based_grasping_strategy/u_v_mpc
+#   u_F_cmd_topic: /hrr_cobot/gripper/force_based_grasping_strategy/u_F
+

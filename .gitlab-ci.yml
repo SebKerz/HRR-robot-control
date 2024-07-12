@@ -1,0 +1,193 @@
+variables:
+  CI_SOURCE_PATH: "$CI_PROJECT_DIR"
+  ROS_PARALLEL_JOBS: "-j8 -l6"
+  CATKIN_WS: "/tmp/catkin_ws"
+  GIT_SUBMODULE_STRATEGY: recursive
+  CI_USER: "ros_ci"
+  JR3_CI_TOKEN: "KzvdtnGrxuEeFLkQyezB"
+  WSG_CI_TOKEN: "4enLtbtQfTHutDk1jzr-"
+  COMAU_CI_TOKEN: "Gnofxzi1zSCkoSQffYxS"
+  HR_RECYCLER_MSGS_CI_TOKEN: "glpat-LNq5S3PZa_8Jsix54yqN"
+  SIM_ROBOTS_CI_TOKEN: "cpDYnNH6nqErTKZ_Hss2"
+
+
+stages:
+  - build
+  - test
+  - deploy
+
+
+.create_ws: &create_ws
+  - apt-get update -qq && apt-get -qq install wget build-essential
+  - if [ ! -d ${CATKIN_WS} ]; then rm -rf ${CATKIN_WS}; fi
+  - mkdir -p ${CATKIN_WS}/src
+  - ln -s $CI_SOURCE_PATH ${CATKIN_WS}/src  
+  - echo "current workspace source:" && ls -l ${CATKIN_WS}/src
+
+
+.install_conda: &install_conda
+  - apt-get update -qq && apt-get -qq install wget build-essential
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+  - bash ~/miniconda.sh -b -p $HOME/miniconda
+  - eval "$(${HOME}/miniconda/bin/conda shell.bash hook)"
+  - conda init
+
+
+.prep_ros_deps: &prep_ros_deps
+  - apt-get -qq install ros-$ROS_DISTRO-gazebo-ros ros-$ROS_DISTRO-ros-control git
+  - rosdep update
+  - source /opt/ros/$ROS_DISTRO/setup.bash
+  - cd ${CATKIN_WS}/src
+  - git clone https://${CI_USER}:${JR3_CI_TOKEN}@gitlab.lrz.de/lsr-itr-ros/ros_jr3.git
+  - git clone https://${CI_USER}:${WSG_CI_TOKEN}@gitlab.lrz.de/lsr-itr-ros/ros-wsg-50.git
+  - git clone https://${CI_USER}:${COMAU_CI_TOKEN}@gitlab.lrz.de/lsr-itr-ros/comau-experimental.git
+  - git clone https://${CI_USER}:${HR_RECYCLER_MSGS_CI_TOKEN}@gitlab.lrz.de/hr_recycler/hr_recycler_msgs.git
+  - echo "workspace source after git clone:" && ls -l ${CATKIN_WS}/src
+  - if [ ! -f .rosinstall ]; then wstool init; else echo "rosinstall file already there";fi  
+  - wstool up
+  - cd ${CATKIN_WS}
+  - rosdep install --from-paths src --ignore-src -r -y
+  
+
+.install_catkin_tools3: &install_catkin_tools3
+  - apt-get install -qq python3-pip
+  - apt-get -qq install python3-catkin-tools 
+  - python3 -m pip install --upgrade osrf-pycommon
+
+
+
+.ros_build: &ros_build
+  - cd ${CATKIN_WS}
+  - catkin build
+  - source ${CATKIN_WS}/devel/setup.bash
+  - echo "Done with ROS build"
+
+
+.condafy: &condafy
+  - conda activate hrr
+  - source ${CATKIN_WS}/devel/setup.bash
+
+
+.sphinx_build: &sphinx_build
+  - cd ${CI_SOURCE_PATH}/data
+  - conda env create -qf hrr_env_with_docu.yaml  
+  - conda activate hrr
+  - source ${CATKIN_WS}/devel/setup.bash
+  - conda install -y -c conda-forge Sphinx nbsphinx sphinx_rtd_theme jupytext sphinx-click myst-parser
+  - cd ${CI_SOURCE_PATH}/hrr_cobot/doc
+  - sphinx-build -b html . public
+  - mv public ${CI_SOURCE_PATH}/public
+
+
+noetic:
+  image: ros:noetic-robot
+  variables:
+    ROS_DISTRO: "noetic"
+  stage: build
+  before_script:
+    - *create_ws
+    - *prep_ros_deps
+    - *install_catkin_tools3
+  script:
+   - *ros_build
+  tags:
+    - ros
+  
+melodic:
+  image: ros:melodic-robot
+  variables:
+    ROS_DISTRO: "melodic"
+  stage: build
+  before_script:
+    - *create_ws
+    - *prep_ros_deps
+    - *install_catkin_tools3
+  script:
+    - *ros_build
+  tags:
+    - ros
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+
+
+conda_check:
+  stage: test
+  before_script:
+    - *create_ws
+    - *prep_ros_deps
+    - *install_catkin_tools3
+    - *ros_build
+    - *install_conda
+  script:
+    - cd ${CI_SOURCE_PATH}/data
+    - conda env create -qf hrr_env_with_docu.yaml
+    - *condafy
+    - python -c "from hrr_common import *"
+    - python -c "from hrr_cobot_robot import *"
+  tags:
+    - ros
+    - python
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+
+ 
+
+robot_model_import_test:
+  stage: test
+  before_script:
+    - *create_ws
+    - *prep_ros_deps
+    - *install_catkin_tools3
+    - *ros_build
+    - *install_conda
+  script:
+    - cd ${CI_SOURCE_PATH}/data
+    - conda env create -qf hrr_env_with_docu.yaml
+    - *condafy
+    - pip install --ignore-installed git+https://${CI_USER}:${SIM_ROBOTS_CI_TOKEN}@gitlab.lrz.de/vgab/sim_robots
+    - python -c "from hrr_common import *"
+    - python -c "from hrr_cobot_robot import *"
+    - python -c "from sim_robots import get_racer_kin_model;import numpy as np;model=get_racer_kin_model();print(model.forward_kin(np.zeros(6)))"
+  tags:
+    - ros
+    - python
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+
+
+cobot_docu_test:
+  stage: test
+  before_script:
+    - *create_ws
+    - *prep_ros_deps
+    - *install_catkin_tools3
+    - *ros_build
+    - *install_conda
+  script:
+    - *sphinx_build
+  tags:
+    - ros
+    - python
+  rules:
+    - if: $CI_COMMIT_REF_NAME != $CI_DEFAULT_BRANCH
+
+pages:
+  stage: deploy
+  needs:
+    - noetic
+  before_script:
+    - *create_ws
+    - *prep_ros_deps
+    - *install_catkin_tools3
+    - *ros_build
+    - *install_conda
+  script:
+    - *sphinx_build  
+  artifacts:
+    paths:
+    - public
+  tags:
+    - ros
+    - python
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH

@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find racer5_sim)/model/mujoco/racer5_cobot.xacro"/>
+  <xacro:include filename="$(find racer5_sim)/model/mujoco/env.xacro"/>
+
+  <!-- use macro for compilation -->
+  <xacro:arg name="dts" default="0.002"/>
+  <xacro:arg name="robot_name" default="racer5"/>
+  <xacro:arg name="xyz_base" default="1.3 0.62 0.0"/>
+  <xacro:arg name="rpy_base" default="0.0 0.0 0.0"/>
+  <xacro:arg name="transmission" default="effort"/> <!-- allows position, velocity and effort -->
+  <xacro:arg name="env_xml_file" default="tum_table"/> <!--name of xml file that describes environment objects.
+  Defaults to a box table with a TUM logo on it-->
+  <xacro:property name="ctrl_type" value="$(arg transmission)"/>
+
+  <xacro:racer5_compiler dt="0.0004"/>
+
+  <!-- robot world constellation --> 
+  <worldbody>
+    <xacro:m_floor name="floor" pos="1.8 0.75 0" size="0 0 1"/>
+    <light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8"  
+	       specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
+	<!-- Robot Declaration --> 
+    <xacro:racer5_body name="$(arg robot_name)" xyz="$(arg xyz_base)" rpy="$(arg rpy_base)"/>
+	<!-- environment xml file --> 
+    <xacro:m_table name="object_table" pos="2.0 0.4 0.1" size="0.5 0.5 0.1"/>
+   </worldbody>
+   
+    <!-- world assets --> 
+    <xacro:m_scene_include/>
+    <!-- robot agent assets -->
+    <xacro:racer5_meshes/>
+	<xacro:racer5_materials name="$(arg robot_name)"/>
+
+	<xacro:if value="${ctrl_type == 'position'}">
+		<xacro:racer5_joint_control name="$(arg robot_name)"/>
+	</xacro:if>
+	<xacro:if value="${ctrl_type == 'velocity'}">
+		<xacro:racer5_joint_velocity_control name="$(arg robot_name)"/>
+	</xacro:if>
+	<xacro:if value="${ctrl_type == 'effort'}">
+		<xacro:racer5_joint_torque_control name="$(arg robot_name)"/>
+	</xacro:if>
+
+	<xacro:flange_sensor name="$(arg robot_name)"/>
+    <!-- define legal constraint violations -->
+    <default>
+        <default class="$(arg robot_name)_body">
+            <geom  material="$(arg robot_name)_geomMat" type="mesh" ></geom>
+            <joint armature="1" damping="500" frictionloss="0" stiffness="0"></joint>
+          <xacro:colors/>          
+        </default>
+    </default>
+</mujoco>

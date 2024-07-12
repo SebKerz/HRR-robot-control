@@ -1,0 +1,4 @@
+has_acceleration_limits: true
+has_velocity_limits: true
+max_acceleration: 5.0
+max_velocity: 0.42

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="moveit_warehouse_db_path"/>
+  <arg name="reset" default="false"/>
+
+  <!-- Load warehouse parameters -->
+  <include file="$(find racer5-0-80_moveit_config)/launch/settings/warehouse.launch.xml" />
+
+  <!-- Run the DB server -->
+  <node name="$(anon mongo_wrapper_ros)" cwd="ROS_HOME" type="mongo_wrapper_ros.py" pkg="warehouse_ros_mongo">
+    <param name="overwrite" value="false"/>
+    <param name="database_path" value="$(arg moveit_warehouse_db_path)" />
+  </node>
+  <!-- If we want to reset the database, run this node -->
+  <node if="$(arg reset)" name="$(anon moveit_default_db_reset)" type="moveit_init_demo_warehouse" pkg="moveit_ros_warehouse" respawn="false" output="screen" />
+</launch>

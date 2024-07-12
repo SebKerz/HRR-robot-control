@@ -1,0 +1,23 @@
+rate: 10 
+controller_list:
+  - name: fake_arm_controller
+    type: interpolate 
+    joints:
+      - joint_0
+      - joint_1
+      - joint_2
+      - joint_3
+      - joint_4
+      - joint_5
+  - name: fake_gripper_controller
+    type: interpolate 
+    joints:
+      - joint_0
+      - joint_1
+      - joint_2
+      - joint_3
+      - joint_4
+      - joint_5
+      - jr3_msr_joint
+      - wsg_50_base_joint_gripper_left
+      - wsg_50_base_joint_gripper_right

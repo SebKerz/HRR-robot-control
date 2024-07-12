@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!--
+  Launch include file to spawn controller manager etc within mujoco ros
+
+  Defaults provided for COMAU RACER 5 (cobot only):
+	- robot_name: which will also serve as the default namespace of all nodes dedicated to control the robot(s)
+    - hw_if:  Changes the control interfaces for the simulated robot. Effort, Position or Velocity.
+    - robot_model_path: path to mujoco model xml. Run generation file in racer5_sim first!
+    - key_path: path to license key to sart mujoco
+-->
+<launch>
+  <arg name="robot_name" default="racer5" doc="robot name. Requires a hw_if_controllers_robot_name.yaml file to exist"/>
+  <arg name="use_moveit" default="true" doc="start moveit plannign engine"/>
+  <arg name="hw_if" default="Effort"
+       doc="hardware interface. Possible selections: Position, Velocity or Effort "/>
+  <arg name="robot_model_path" default="/tmp/mujoco/mj_racer_cobot.xml" doc="path of mujoco model xml"/>
+  <arg name="key_path" default="$(env HOME)/.mujoco/mjkey.txt" doc="path to mjkey. Requieres HOME variable to be set"/>
+  <arg name="robot_description_param" value="/$(arg robot_name)/robot_description"/>
+  <arg name="controllers" value="joint_state_controller 
+		  "
+       doc="list of controllers loaded and enabled upon start"/>
+  
+  <node name="$(arg robot_name)" pkg="mujoco_sim" type="mujoco_robot_control" output="screen">
+   <param name="robot_model_path" value="$(arg robot_model_path)"/>
+   <param name="robot_description_param" value="$(arg robot_description_param)"/>
+  </node>
+  <param name="mujoco_key_path" value="$(arg key_path)"/>
+  <group ns="$(arg robot_name)">
+	 <param name="$(arg robot_description_param)" 
+	 			command="$(find xacro)/xacro --inorder $(find racer5_sim)/model/racer5_cobot.urdf.xacro
+					robot_ns:=$(arg robot_name)
+					xyz_base:='1.2 0.5 0.0'
+					hardware_if:='$(arg hw_if)JointInterface'
+					"/>
+   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen"/>
+   <node name="controller_spawner" pkg="controller_manager" type="spawner" 
+          respawn="false" output="screen" args="$(arg controllers) "/>
+   <rosparam command="load" file="$(find racer5_sim)/config/$(arg hw_if)_controllers_$(arg robot_name).yaml"/>
+   <include if="$(arg use_moveit)" file="$(find racer5_cobot_moveit_config)/launch/moveit.launch.include">
+     <arg name="robot_name" value="$(arg robot_name)"/>
+     <arg name="pipeline" value="ompl"/>
+   </include>   
+  </group>
+
+
+</launch>

@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+import os
+import rospy
+import signal
+import subprocess
+
+from wsg_50_msgs.msg import StatusFull
+from hr_recycler_msgs.msg import ToolType
+
+import hrr_common
+from hrr_cobot_robot.utils import tool2tool_type
+
+
+def check_connection(target_ip="192.168.1.20"):
+    try:
+        return len(subprocess.check_output(["ping", "-c", "1", target_ip])) > 0
+    except subprocess.CalledProcessError:
+        return False
+
+
+class WsgWatchDog:
+    p_gripper = None
+    tool_name = ""
+
+    def __init__(self, gripper_ns="/hrr_cobot/gripper",
+                 gripper_ip="192.168.1.20"):
+        self._gripper_ns = hrr_common.fix_ns(gripper_ns)
+        self._gripper_ip = gripper_ip
+        self._dummy_sub = rospy.Subscriber(f"{self._gripper_ns}status", StatusFull, self._status_cb)
+        self._latest_msg = rospy.get_time() - 1e9
+
+    @staticmethod
+    def log_str(msg):
+        return f"WSG-50 watchdog->{msg}"
+
+    def _status_cb(self, _):
+        self._latest_msg = rospy.get_time()
+
+    @property
+    def dt_msg(self):
+        return rospy.get_time() - self._latest_msg
+
+    @property
+    def gripper_alive(self) -> bool:
+        if f"{self._gripper_ns}status" not in str(subprocess.check_output(["rostopic", "list"])):
+            return False
+        return self.dt_msg <= 1.0
+
+    def start_gripper(self):
+        if self.gripper_alive:
+            rospy.logerr(self.log_str("gripper is already running"))
+            return
+
+        self.p_gripper = subprocess.Popen(["roslaunch hrr_cobot_robot hrr_wsg_50.launch"], shell=True,
+                                          stdout=subprocess.DEVNULL, preexec_fn=os.setsid)
+
+    def kill_gripper(self):
+        if self.p_gripper is not None:
+            rospy.loginfo(self.log_str("killing gripper driver"))
+            os.killpg(os.getpgid(self.p_gripper.pid), signal.SIGTERM)
+            self.p_gripper = None
+
+
+def run_watchdog(tool_parameter_name="/hrr_cobot/tool_name", rate=0.5, restart_delay=5.0):
+    wsg = WsgWatchDog()
+    r = rospy.Rate(rate)
+    t0 = rospy.get_time() - 2 * restart_delay
+    while not rospy.is_shutdown():
+        if tool2tool_type(hrr_common.get_param(tool_parameter_name)) == ToolType.WSG_50_DSA:
+            if wsg.p_gripper is None and (rospy.get_time() - t0) > restart_delay:
+                wsg.start_gripper()
+                t0 = rospy.get_time()
+                rospy.sleep(1.23)
+            if not wsg.gripper_alive and wsg.dt_msg < 1e8:
+                rospy.logwarn(wsg.log_str(
+                    f"gripper is offline -> latest message received {wsg.dt_msg:.2f} seconds ago"))
+        else:
+            if wsg.gripper_alive:
+                rospy.loginfo_throttle(30.0, wsg.log_str("gripper disabled but still reachable. Keep running"))
+            elif wsg.p_gripper is not None:
+                rospy.loginfo(wsg.log_str("gripper disabled and not reachable. Shut down"))
+                wsg.kill_gripper()
+        r.sleep()
+    rospy.loginfo(wsg.log_str("shutting down"))
+    wsg.kill_gripper()
+
+
+if __name__ == "__main__":
+    rospy.init_node("hrr_gripper_watchdog")
+    run_watchdog()

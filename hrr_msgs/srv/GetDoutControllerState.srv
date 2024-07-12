@@ -1,0 +1,7 @@
+# 
+-----------
+Header header
+comau_msgs/Digital[] pins
+bool enabled
+bool error
+string msg

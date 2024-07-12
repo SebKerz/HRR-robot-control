@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="URDF_tool_changer" pkg="hrr_cobot_robot" type="tool_changer"
+          output="screen"/>
+</launch>
+

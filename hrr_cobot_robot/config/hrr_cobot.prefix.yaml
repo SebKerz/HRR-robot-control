@@ -1,0 +1,427 @@
+## This file is the composition of
+###########################################
+# --- URDF prefix sensitive variables
+###########################################
+urdf_prefix: hrr_cobot.
+joint_names: &joint_names
+  - hrr_cobot.joint_1
+  - hrr_cobot.joint_2
+  - hrr_cobot.joint_3
+  - hrr_cobot.joint_4
+  - hrr_cobot.joint_5
+  - hrr_cobot.joint_6
+base_link_name: &base_link_name hrr_cobot.base_link
+cartesian_hw_handle_name: &cartesian_hw_handle_name hrr_cobot.tcp_controller
+ft_link_name: &ft_link_name hrr_cobot.jr3msr
+ft_joint_name: &ft_joint_name hrr_cobot.jr3msr_joint
+wsg_base_link: &wsg_base_link hrr_cobot.wsg_50_base_link
+wsg_tcp_link: &wsg_tcp_link hrr_cobot.wsg_50_tcp
+wsg_dsa_link: &wsg_dsa_link hrr_cobot.wsg_50_dsa_tcp
+wsg_50_base_joint_gripper_left: &wsg_50_base_joint_gripper_left hrr_cobot.wsg_50_base_joint_gripper_left
+wsg_50_base_joint_gripper_right: &wsg_50_base_joint_gripper_right hrr_cobot.wsg_50_base_joint_gripper_right
+ee_link_name: &ee_link_name hrr_cobot.ee_link
+# synonyms
+base_frame: *base_link_name
+joints: *joint_names
+sns_frame: *cartesian_hw_handle_name
+tool_frame: *cartesian_hw_handle_name
+## Robot driver configuration
+# Settings for core ros driver
+loop_hz: &robot_loop_hz 200
+robot_hw_name: &robot_hw_name trashbot
+sensor_joint_name: *ft_joint_name
+# cartesian_hw_handle_name moved up
+cycle_time_error_threshold: 0.002
+max_dt_velocity_approximation: 0.05
+# flags in use
+use_arm_server: true             # enable motion execution (requires use_robot_server to be set)
+use_robot_server: true           # enable sending motion-commands of robot
+use_state_server: true           # enable state-reading of robot
+arm_server_port: "1101"          # the port of TCP motion server
+state_server_port: "1104"        # the port of TCP state server
+robot_server_port: "1105"        # the port of TCP motion server
+use_services: true               # provide ROS-services directly from robot-driver
+use_difference_velocity_estimation: true # publish joint-velocity by numerical differentiation
+publish_states_from_driver: false  # publish states directly from ROS-driver
+verbose_pdl: false               # enable verbose logging on PDL
+control_ios: true                # control DOUT ports
+update_sns_params: false         # allow to update sensor-track configuration parameters
+lin_velocity: 0.2                # Move-fly lin_velocity
+fly_dist: 5.0                    # Move-fly fly_dist
+threshold: 0.2                   # time period to publish move-fly commands
+sensor_type: 7                   # Sensor tracking version: 5-9 relative , 10-13 absolute
+sensor_cnvrsn: 1                 # Sensor tracking conversion number (refer to COMAU manual)
+sensor_gain: 50                  # Sensor tracking gain (refer to COMAU manual) 
+sensor_time: 5                   # Sensor tracking ramp time(refer to COMAU manual) 
+sensor_offset_lim_trans: 5000    # Sensor tracking translation deviation limit in mm (refer to COMAU manual) 
+sensor_offset_lim_rot: 8000      # Sensor tracking angular deviation limit in degree (refer to COMAU manual)  
+set_move_fly_service_name: set_move_fly_params
+set_sensor_track_params_service_name: set_sensor_tracking_params
+set_digital_io_service_name: set_digital_io
+set_arm_state_service_name: set_arm_state
+get_comau_parameter_service_name: get_comau_parameters
+
+
+
+####################################
+## Python-Cobot inteface
+####################################
+v_max: 0.05
+omega_max: 0.1
+buffer_ft_data: True
+read_tp5: True
+cmd_sns_vel: True
+cmd_sns_compl: False
+cmd_robot_io: True
+controller_reset_sleep_time: 0.4
+screwdriver_default_runtime: 2.0
+max_rpm: 250000
+min_rpm: 3500
+hard_joint_limit_distance: [0.01, 0.01, 0.01, 0.01, 0.13, 0.01] # hard joint limits for Cart. servoing to interrupt motion
+soft_joint_limit_distance: [0.1, 0.1, 0.1, 0.1, 0.25, 0.1]      # soft joint limits for Cart servoing to raise warning
+## ee-tools
+set_tool_name_topic: set_tool
+
+####################################
+## Skill-specific configs
+####################################
+skill_server:
+  buffer_size: 500000
+  observe_attributes:
+    - q
+    - B_F_msr
+    - B_err_F
+
+unscrewing:
+  f_insert: 10.0
+  f_contact: 5.0
+  f_critical: 10.0
+  f_unscrew: 0.0
+  insertion_distance: 0.0015
+  num_mp_retrials: 5
+  screw_height: 0.01
+  screw_time: 5.0
+
+finger_grasping:
+  safety_distance: 0.1
+  out.below_dist: 0.03
+
+vacuum_grasping:
+  safety_distance: 0.1
+  below_distance: -0.03
+  hardcoded_orientation: true
+  f_contact: 15
+  surface_normal: [ 0, 0, 1 ]
+  E_p_tcp: [ 0, 0, 0.198 ]
+  f_payload_minimum: 2
+
+tool_change_routine:
+  v: [ 0.01, 0.02, 0.03, 0.035, 0.04 ]
+
+
+# hammering_action_srv_name: /hrr_cobot/skills/hammering
+# levering_action_srv_name: /hrr_cobot/skills/levering
+
+# Motion Planner topic / service names
+matlab_working_dir: /home/hrr_cobot/_ros/hr_recycler_ws/src/planner/src
+device_pose_topic_name: device_pose
+device_type_topic_name: device_type
+# the parameters below can be commented if the interfaces are available as is
+#motion_planner_trajectory_topic: /hrr_cobot/motion_planner/joint_trajectory
+#motion_planner_joint_goal_topic: /hrr_cobot/motion_planner/joint_goal
+#motion_planner_goal_pose_topic: /hrr_cobot/motion_planner/goal_pose
+#call_joint_trajectory_planner_service: /hrr_cobot/motion_planner/plan_joint_trajectory
+#call_cartesian_trajectory_planner_service: /hrr_cobot/motion_planner/plan_trajectory_to_pose
+sensitive_grasping:
+  f_contact: 2.0    # force in N to detect an environment impact
+  hover_distance: 0.1 # distance to hover robot above goal pose in m
+  grasping_strategies: [1,  0, 0,  0,  0,  1]  # grasping strategy selector. In case no casadi / MPC interface is available, replace 1 by -1 (force-based)
+  scale_vel: 0.1 # velocity scaling for downward motion
+  max_tilt: 0.7  # maximum tilting angle
+  closing_speed: 0.01  # closing speed in m/s (max is 0.44)
+  closing_width: 0.02 # closing width in m
+  opening_width: 0.06 # opening width in m
+  rotation_steps: 150  # number of steps for a rotation for removing the lightbulbs
+  tcp_link_name: *wsg_tcp_link  # name of default WSG TCP frame
+  dsa_link_name: *wsg_dsa_link   # published TCP frame used for rotation
+
+
+# general pipeline params
+restart_sleep_time: 1.0
+
+# device topic names
+device_pose_topic_name: device_pose
+device_type_topic_name: device_type
+
+###################################
+## ROS-CONTROLLER CONFIGURATION
+###################################
+# set controller names for other programs
+comau_state_controller_name: comau_robot_state_controller
+joint_trajectory_handler_name: joint_trajectory_handler
+sns_trk_vel_controller_name: sensor_track_velocity_controller
+sns_trk_compl_controller_name: sensor_track_compliant_controller
+kolver_command_controller_name: kolver_run
+kolver_program_controller_name: kolver_program
+shaft_grinder_controller_name: shaft_grinder
+gimatic_encoder_controller_name: gimatic_encoder_controller
+gimatic_pin_controller_name: tool_changer
+vacuum_valve_pin_controller_name: vacuum_controller
+
+
+full_joint_state_publisher:
+  publish_rate: *robot_loop_hz
+  joint_names: *joint_names
+  publisher_topic_name: /joint_states
+
+
+comau_robot_state_controller:
+  type: hrr_controllers/TP5StateController
+  robot_hw_name: *robot_hw_name
+  publish_rate: *robot_loop_hz
+
+cartesian_state_controller:
+  type: hrr_controllers/CartesianStateController
+  hw_name: *cartesian_hw_handle_name
+  publish_rate: *robot_loop_hz
+  base_frame: *base_link_name
+  target_frame: *cartesian_hw_handle_name
+
+# feedforward velocity-controller
+sensor_track_velocity_controller:
+  type: hrr_controllers/SnsTrkVelocityPoseController
+  sns_trk_hw_name: *cartesian_hw_handle_name
+  target_frame: *cartesian_hw_handle_name
+  base_frame: *base_link_name
+  debug: false
+  cmd_topic_name: tcp_v_cmd
+  ee_v_max: 0.2
+  dead_man_timeout: 0.1
+  loop_hz: *robot_loop_hz
+
+# Joint Trajectory Loader Handler
+joint_trajectory_handler:
+  type: comau_controllers/JointTrajectoryHandler
+  hw_trajectory_handle: *robot_hw_name
+  publish_rate: 50
+
+# Joint Trajectory Loader Handler
+cartesian_trajectory_handler:
+  type: comau_controllers/CartesianTrajectoryHandler
+  hw_trajectory_handle: *cartesian_hw_handle_name
+  publish_rate: 50
+
+ft_state_controller:
+  type: force_torque_sensor_controller/ForceTorqueSensorController
+  publish_rate: 1000
+
+# DOUT / DIN controllers
+digital_io_state_controller:
+  type: hrr_controllers/DigitalIOStateController
+  publish_rate: 1
+
+
+vacuum_controller:
+  type: hrr_controllers/DigitalPinController
+  get_state_srv_name: get_pins
+  set_state_srv_name: set_pins
+  frame_id: vacuum_gripper
+  pins: [ 1, 3 ]
+  pin_start_values: [ 0, 1 ]
+
+tool_changer:
+  type: hrr_controllers/DigitalPinController
+  get_state_srv_name: get_pins
+  set_state_srv_name: set_pins
+  set_state: set_state
+  frame_id: tool_changer
+  pins: [ 5 ]
+  pin_start_values: [ 0 ]
+
+kolver_program:
+  type: hrr_controllers/DoutEncoderController
+  get_state_srv_name: get_program
+  set_state_srv_name: set_program
+  frame_id: "screwdriver"
+  enable_encoder_pin: 10
+  encoder_pins: [ 7, 8, 9 ]
+  legal_programs: [ 1,2,3,4,5,6,7,8 ]
+  program_names:
+    - slow
+    - medium1
+    - medium2
+    - medium3
+    - medium4
+    - medium5
+    - medium6
+    - full_speed
+  program_numbers: [ 1,2,3,4,5,6,7,8 ]
+
+kolver_run:
+  type: hrr_controllers/DoutEncoderController
+  get_state_srv_name: get_pins
+  set_state_srv_name: set_mode
+  frame_id: "screwdriver"
+  enable_encoder_pin: 14
+  encoder_pins: [ 11, 12, 13 ]
+  legal_programs: [ 5 ]
+  program_names:
+    - loosening
+  program_numbers:
+    - 5
+  start_mode: loosening
+  runtime: 3.0
+
+shaft_grinder:
+  type: hrr_controllers/DoutEncoderController
+  get_state_srv_name: get_shaft_grinder_state
+  set_state_srv_name: set_shaft_grinder_speed
+  frame_id: "shaft_grinder"
+  enable_encoder_pin: 14
+  encoder_pins: [ 11, 12, 13 ]
+  legal_programs: [ 6, 7, 8 ]
+  program_names:
+    - slow
+    - variable
+    - full_speed
+  program_numbers: [ 6, 7, 8 ]
+  runtime: 3.0
+
+gimatic_encoder_controller:
+  type: hrr_controllers/DoutEncoderController
+  get_state_srv_name: get_pins
+  set_state_srv_name: set_mode
+  frame_id: "tool_changer"
+  enable_encoder_pin: 14
+  encoder_pins: [ 11, 12, 13 ]
+  legal_programs: [ 2 ]
+  program_names:
+    - open
+  program_numbers: [ 2 ]
+
+## namespace-sensitive controllers
+
+# hybrid force-velocity controller
+sensor_track_compliant_controller:
+  wrench_cur_topic_name: "/hrr_cobot/B_F_ext"
+  type: hrr_controllers/CompliancePoseController
+  sns_trk_hw_name: *cartesian_hw_handle_name
+  base_frame: *base_link_name
+  target_frame: *cartesian_hw_handle_name
+  debug: true
+  cmd_topic_name: tcp_v_cmd
+  ee_v_max: 0.2
+  dead_man_timeout: 0.1
+  control_select_topic_name: "S"
+  full_cmd_topic_name: "hybrid_ctrl_cmd"
+  f_max: 80.0
+  m_max: 80.0
+  publish_ft: true
+  loop_hz: *robot_loop_hz
+
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: *robot_loop_hz
+  robot_description: /hrr_cobot/robot_description
+
+
+###################################
+## F/T-sensor content
+###################################
+ft_sensor:
+  hw_plugin: jr3/JR3Sensor
+  hw_name: &ft_topic_name ft_sensor
+  frame_id: *ft_link_name
+  sensor_joint_name: *ft_joint_name
+  pub_hz: 1000.0
+  topic_name: "msr_raw"
+  board_number: 0
+  flip_x_axis: true
+  filter_number: 1
+  reset_on_start: false
+  ft_topic_name: *ft_topic_name
+  v_max: 0.1
+  bit_mask_hack: [ 1, 1, 1, 1, 1, 1 ]                # bit masking to neglect single axes from post-calibration testing
+  calibration_joint_offset: [-1.3, 0, 0, 0, -0.5, 0]  # offset to default joint
+  default_joint_velocities: [ 0.4, 0.4, 0.4 ]        # default joint velocities for calibration routine (q4..6)
+  F_max_noise: 8.0                                   # maximum noise value after calibration
+  F_max_post_calibration: 15.0                       # maximum allowed force-norm after calibration
+  scale_joint_range: [ 1.0, 0.9, 1.5 ]               # relatively scalint, where 1 euqals approximately a rotation of 90 degree per joint (q4...6)
+
+
+###################################
+## GRIPPER content
+###################################
+gripper:
+  com_mode: script
+  frame_id: *wsg_base_link
+  joint_names:
+    - *wsg_50_base_joint_gripper_left
+    - *wsg_50_base_joint_gripper_right
+  loop_hz: 5.0
+  port: 1000
+  protocol: tcp
+  publish_joints: true
+  use_all_wsg_services: false
+
+  # dsa content
+  use_dsa: false
+  use_dsa_sparsely: false
+  tool_link_name: *wsg_tcp_link
+  cmd_in_ee_frame: false
+  u_v_max: 0.005
+  u_v_rot_max: 0.01
+  scale_velocity: true
+  integral_window_size: 50
+  gripper_alignment_ctrl_loop_hz: 30
+  base_link_name: *base_link_name
+  ee_link_name: *ee_link_name
+  control_frame: *base_link_name
+  ft_ext_topic_name: /hrr_cobot/B_F_ext
+  gripper_alignment_error_topic: /hrr_cobot/gripper/alignment_error
+  velocity_based_command_topic_name: &velocity_based_command_topic_name /hrr_cobot/gripper/u_v_cmd
+  force_based_command_topic_name: &force_based_command_topic_name /hrr_cobot/gripper/u_F_cmd
+  strategy_selection_topic_name: /hrr_cobot/gripper/strategy
+  vel_based_grasping_strategy:
+    command_topic: *velocity_based_command_topic_name
+  force_based_grasping_strategy:
+    command_topic: *force_based_command_topic_name
+
+####################################
+### cobot-name sensitive parameters
+####################################
+joint_state_topic_name: /hrr_cobot/joint_states
+
+# controller topic names -> depends on cobot-name and dedicated controller name (see above)
+sns_trk_topic_name: /hrr_cobot/sensor_track_velocity_controller/tcp_v_cmd
+control_select_topic_name: /hrr_cobot/sensor_track_compliant_controller/S
+cmd_topic_name: /hrr_cobot/sensor_track_compliant_controller/hybrid_ctrl_cmd
+ft_ack_srv_name: /hrr_cobot/sensor_track_compliant_controller/acknowledge_calibration
+joint_trajectory_action_topic_name: /hrr_cobot/joint_trajectory_handler/comau_joint_trajectory_handler
+
+# action names
+change_tool_action_srv_name: /hrr_cobot/skills/change_tool
+cutting_action_srv_name: /hrr_cobot/skills/cutting
+grinding_action_srv_name: /hrr_cobot/skills/grinding
+pc_opening_action_srv_name: /hrr_cobot/skills/pc_opening
+sensitive_grasping_action_srv_name: /hrr_cobot/skills/sensitive_grasping
+unscrew_action_srv_name: /hrr_cobot/skills/unscrew
+vacuum_pick_place_action_srv_name: /hrr_cobot/skills/pick_place_vacuum
+calibration_action_srv_name: /hrr_cobot/calibrate_sensor
+finger_grasping_action_srv_name: /hrr_cobot/skills/finger_grasping
+# hammering_action_srv_name: /hrr_cobot/skills/hammering
+# levering_action_srv_name: /hrr_cobot/skills/levering
+
+# Motion Planner topic / service names (cobot-name sensitive)
+# the parameters below can be commented if the interfaces are available as is
+#motion_planner_trajectory_topic: /hrr_cobot/motion_planner/joint_trajectory
+#motion_planner_joint_goal_topic: /hrr_cobot/motion_planner/joint_goal
+#motion_planner_goal_pose_topic: /hrr_cobot/motion_planner/goal_pose
+#call_joint_trajectory_planner_service: /hrr_cobot/motion_planner/plan_joint_trajectory
+#call_cartesian_trajectory_planner_service: /hrr_cobot/motion_planner/plan_trajectory_to_pose
+gripper_node_names:
+  - /hrr_cobot/gripper
+  - /hrr_cobot/gripper/alignment_watcher
+  - /hrr_cobot/gripper/force_based_grasping_strategy
+  - /hrr_cobot/gripper/vel_based_grasping_strategy
+

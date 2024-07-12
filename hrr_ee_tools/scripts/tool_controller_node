@@ -1,0 +1,26 @@
+#!/usr/bin/zsh
+
+if [ -z ${1} ]; then node_name="tool_controller"; else node_name="${1}"; fi
+if [ -z ${2} ]; then device="/dev/ttyUSB0"; else node_name="${2}"; fi
+if [ -z ${3} ]; then baud="57600"; else baud="${3}"; fi
+
+{
+    source /home/$(whoami)/.zshrc
+    condafy;
+    conda activate ros_py2;
+    echo "activated ros_py2"
+} || {
+    echo "could not find condafy or `ros_py2` as the python2 ros interface'; quit execution"
+    exit;
+}
+
+{
+    echo "launch tool_controller"
+    rosparam set "/${node_name}/port" ${device}
+    rosparam set "/${node_name}/baud" ${baud}
+    rosparam set "/${node_name}/tool_reset_srv_name" "${node_name}/reset"
+    rosrun rosserial_python serial_node.py &;
+} || {
+    echo "failed to launch tool controller"
+}
+

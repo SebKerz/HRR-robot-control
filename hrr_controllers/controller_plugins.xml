@@ -1,0 +1,89 @@
+<library path="lib/libhrr_controllers">
+
+    <class name="hrr_controllers/CartesianStateController"
+           type="hrr_controllers::CartesianStateController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            Cartesian State controller that reads out comau RPY-pose as comau_msg and/or tf broadcaster
+        </description>
+
+    </class>
+
+    <class name="hrr_controllers/TP5StateController"
+           type="hrr_controllers::TP5StateController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            Cartesian State controller that reads out comau RPY-pose as comau_msg and/or tf broadcaster
+        </description>
+
+    </class>
+
+    <class name="hrr_controllers/CalibratedFtStateController"
+           type="hrr_controllers::CalibratedFTStateController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            Cartesian Velocity controller that integrates a twist message to sensor-tracking divergence command
+            using the Pose based interface
+        </description>
+    </class>
+
+    <class name="hrr_controllers/SnsTrkVelocityPoseController"
+           type="hrr_controllers::STPoseVelocityController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            Cartesian Displacement controller that assumes a relative displacement is provided to the controller
+            that is then forwarded to the COMAU robot using the Sensor-tracking divergence command
+            using the Pose based hardware interface
+        </description>
+    </class>
+
+    <class name="hrr_controllers/SnsTrkVelocityController"
+           type="hrr_controllers::STVelocityController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            Cartesian Velocity controller that integrates a twist message to sensor-tracking divergence command
+            Cartesian State controller that reads out comau RPY-pose as comau_msg and/or tf broadcaster
+        </description>
+    </class>
+
+
+    <class name="hrr_controllers/ComplianceController"
+           type="hrr_controllers::STCompliantController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            Basic compliance controller using an external (expected to be calibrated) FT sensor and a simple
+            proportional gain controller to follow force and forward velocity commands.
+            Differs only by HW-interface implementation.
+        </description>
+    </class>
+
+    <class name="hrr_controllers/CompliancePoseController"
+           type="hrr_controllers::STCompliantPoseController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            See "hrr_controllers/ComplianceController". Differs only by HW-interface implementation.
+        </description>
+    </class>
+
+    <class name="hrr_controllers/DigitalIOStateController"
+           type="hrr_controllers::DigitalIOStateController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>Digital State Controller to publish all digital states to ROS</description>
+
+    </class>
+
+    <class name="hrr_controllers/DigitalPinController"
+           type="hrr_controllers::DigitalPinController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>read/write arbitrary digital IOs</description>
+
+    </class>
+
+    <class name="hrr_controllers/DoutEncoderController"
+           type="hrr_controllers::DoutEncoderController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>control an adress encoder via a set of predefined digital IOs</description>
+
+    </class>
+
+</library>

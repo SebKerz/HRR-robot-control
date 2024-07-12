@@ -1,0 +1,14 @@
+# note: this action assumes that moition planner
+# is fed by additional topics from the perception modules
+# that update the collision scene
+# otherwise this planner will destroy the robot or
+# hit any objects that is blocking its way.
+# enjoy!
+# goal definition
+geometry_msgs/PoseStamped goal_pose
+---
+#Result
+string outcome
+---
+#Feedback
+string move_info

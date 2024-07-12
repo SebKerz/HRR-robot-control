@@ -1,0 +1,7 @@
+Header header
+int8 new_state
+string state_name
+float32 timeout
+-----
+bool success
+string msg

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!--
+  Simulate HRR-Cobot with default setttings
+-->
+<launch>
+
+ <include file="$(find hrr_cobot_sim)/launch/gazebo.launch"/>   
+  
+ <include file="$(find hrr_cobot_sim)/launch/spawn_hrr_cobot.launch"/>
+ 
+ <include file="$(find hrr_cobot_moveit_config)/launch/hrr_cobot_plan.launch">        
+   <arg name="robot_ns" value="/"/>
+ </include>
+</launch>

@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="urdf_tool_changer" pkg="hrr_cobot_robot" type="urdf_updater_server" output="screen"/>
+</launch>

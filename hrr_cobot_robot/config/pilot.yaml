@@ -1,0 +1,21 @@
+# Pilot Demo setup
+# note that all parameters here overwrite the values from hrr_cobot.prefix.yaml
+robot_ip: "172.22.162.112"        # this the the IP of the Robot
+use_tool_changer_encoder: True   # use robot wrist DOUT for tool-changer
+use_vacuum_control_encoder: False # use robot wrist DOUT to enable pneumatic valve
+
+arduino_node_name: /hrr_cobot/tool_controller  # node name for arduino node
+
+tool_change_routine:
+  tool_change_poses_path: /home/hrr_cobot/_ros/hr_recycler_ws/src/hrr_cobot/hrr_cobot_robot/data/tool_changer
+
+initialize_matlab: True         # enable Matlab based motion planner
+matlab_working_dir: /home/hrr_cobot/_ros/hr_recycler_ws/src/planner/src # working directory for Matlab, put hrr_cobot or schrottgott for pc change
+
+# calibration routine overwrites
+ft_sensor:
+  calibration_joint_offset: [1.0, 0, 0, 0, -0.5, 0]  # offset to default joint
+  default_joint_velocities: [ 0.4, 0.4, 0.4 ]        # default joint velocities for calibration routine (q4..6)
+  scale_joint_range: [ 1.0, 0.9, 1.5 ]               # relatively scaling, where 1 equals approximately a rotation of 90 degree per joint (q4...6)
+
+toolchanger_dout_pin: 5 #pin to open/close tool changer

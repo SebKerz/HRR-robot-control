@@ -1,0 +1,68 @@
+# Settings for ros_control control loop
+hardware_control_loop:
+   loop_hz: 125
+
+# Settings for ros_control hardware interface
+hardware_interface:
+   joints: &robot_joints
+     - joint_1
+     - joint_2
+     - joint_3
+     - joint_4
+     - joint_5
+     - joint_6
+ 
+joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 50  
+    joints: &all_joints
+     - joint_1
+     - joint_2
+     - joint_3
+     - joint_4
+     - joint_5
+     - joint_6   
+     - wsg_50_base_joint_gripper_left
+     - wsg_50_base_joint_gripper_right
+
+# Joint Trajectory Controller - position based -------------------------------
+# For detailed explanations of parameter see http://wiki.ros.org/joint_trajectory_controller
+joint_trajectory_controller:
+   type: position_controllers/JointTrajectoryController
+   joints: *robot_joints
+   constraints:
+      goal_time: 0.6
+      stopped_velocity_tolerance: 0.05
+      joint_1: {trajectory: 0.2, goal: 0.1}
+      joint_2: {trajectory: 0.2, goal: 0.1}
+      joint_3: {trajectory: 0.2, goal: 0.1}
+      joint_4: {trajectory: 0.2, goal: 0.1}
+      joint_5: {trajectory: 0.2, goal: 0.1}
+      joint_6: {trajectory: 0.2, goal: 0.1}
+   stop_trajectory_duration: 0.5
+   state_publish_rate: 125
+   action_monitor_rate: 10
+
+# Joint Trajectory Controller - effort based -> need to adjust launch pipeline with proper transmission interface--
+effort_joint_trajectory_controller:
+  type: effort_controllers/JointTrajectoryController
+  joints: *robot_joints
+  gains: # Note: these values should never be applied on the actual robot
+    joint_1: {p: 8000.0, d: 1000.0,  i: 10.0, i_clamp: 1}
+    joint_2: {p: 4000.0, d: 1000.0,  i: 10.0, i_clamp: 1}
+    joint_3: {p: 1000.0, d: 100.0,   i: 10.0, i_clamp: 1}
+    joint_4: {p:  1000.0, d:   60.0,  i:  10.0, i_clamp: 1}
+    joint_5: {p:   800.0, d:   40.0,  i:   0.4, i_clamp: 1}
+    joint_6: {p:   400.0, d:    1.0,  i:   0.1, i_clamp: 1}
+  constraints:
+    goal_time: 0.6
+    stopped_velocity_tolerance: 0.05
+    joint_1: {trajectory: 0.2,  goal: 0.1}
+    joint_2: {trajectory: 0.2,  goal: 0.1}
+    joint_3: {trajectory: 0.2,  goal: 0.1}
+    joint_4: {trajectory: 0.2,  goal: 0.1}
+    joint_5: {trajectory: 0.2,  goal: 0.1}
+    joint_6: {trajectory: 0.2,  goal: 0.1}
+  state_publish_rate:  125            # Override default
+  action_monitor_rate: 10            # Override default
+  stop_trajectory_duration: 0.5        # Override default

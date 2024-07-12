@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="cobot_ns"            doc="namespace to nest WSG content"  default="/hrr_cobot"/>
+    <arg name="gripper_node_name"   doc="gripper node name"      default="gripper"/>
+    <arg name="use_dsa"             doc="use dsa support"        default="true"/>
+
+    <arg name="gripper_ns" value="$(arg cobot_ns)/$(arg gripper_node_name)"/>
+
+    <param name="/wsg_node_name"   value="$(arg gripper_ns)"/>
+    <group ns="$(arg cobot_ns)">
+        <node name="$(arg gripper_node_name)"  pkg="wsg_50_hw" type="wsg_50_ip" output="screen" respawn="false">
+            <param name="joint_state_topic" value="$(arg gripper_ns)/joint_states"/>
+        </node>
+
+        <group if="$(arg use_dsa)" ns="$(arg gripper_node_name)">
+            <include file="$(find wsg_50_hw)/launch/dsa_alignment.launch">
+                <arg name="gripper_ns"            value="$(arg gripper_ns)"/>
+                <arg name="use_force_strategy"    value="true"/>
+                <arg name="use_velocity_strategy" value="true"/>
+                <arg name="load_params"           value="false"/>
+            </include>
+        </group>
+    </group>
+</launch>

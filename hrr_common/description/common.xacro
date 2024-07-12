@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="hrr-cobot-base">
+  <xacro:property name="PI" value="3.1415926535897931"/>
+  <xacro:arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface"/>
+
+  <xacro:arg name="pos_x" default="0"/>
+  <xacro:arg name="pos_y" default="0"/>
+  <xacro:arg name="pos_z" default="0"/>
+  <xacro:arg name="roll" default="0"/>
+  <xacro:arg name="pitch" default="0"/>
+  <xacro:arg name="yaw" default="0"/>
+  <xacro:arg name="robot_prefix" default=""/>
+  <xacro:arg name="ros_ns" default=""/>
+  <!-- optionally add a tool frame as a static joint / link-->
+  <xacro:arg name="xyz_tcp" default="0 0 0.0"/>
+  <xacro:arg name="rpy_tcp" default="0 0 0"/>
+  <!-- translation and orientation of flange to FT-sensor -->
+  <xacro:arg name="rpy_ft" default="0 0 -${1.0 * PI/4}"/>
+  <xacro:arg name="tool_type" default="0"/>
+  <xacro:arg name="ft_flipped" default="0"/>
+  <xacro:arg name="no_fucks_given" default="1"/>
+
+
+  <xacro:include filename="$(find comau_description)/urdf/comau_common.macro.xacro" />
+  <xacro:include filename="$(find hrr_common)/description/materials.xacro" />
+  <!-- Include FT-sensor THE FOLLOWING LINES NEED ADJUSTMENT FOR THE SCHUNK SENSOR -->
+  <xacro:include filename="$(find jr3)/description/jr3.xacro"/>
+  <!-- Include tools -->
+  <xacro:include filename="$(find hrr_common)/description/hrr_tool.xacro"/>
+
+  <!-- connector components -->
+  <xacro:include filename="$(find hrr_common)/description/connectors/connector_orange.xacro"/>
+  <xacro:include filename="$(find hrr_common)/description/connectors/connector_black.xacro"/>
+  <xacro:include filename="$(find hrr_common)/description/connectors/connector_gripper_silver.xacro"/>
+
+  <!-- add components -->
+  <xacro:connector_orange parent="$(arg robot_prefix)ee_link" name="$(arg robot_prefix)connect_flange"/>
+  <xacro:jr3 parent="$(arg robot_prefix)connect_flange"
+             name="$(arg robot_prefix)jr3" rpy="$(arg rpy_ft)"
+             ns="$(arg ros_ns)" flipped="$(arg ft_flipped)"/>
+  <!-- connector -->
+  <xacro:connector_black parent="$(arg robot_prefix)jr3" name="$(arg robot_prefix)connect"/>
+
+
+  <xacro:toolchanger parent="$(arg robot_prefix)connect" prefix="$(arg robot_prefix)"
+      no_fucks_given="$(arg no_fucks_given)"
+      />
+  <xacro:hrr_tool tool_type="$(arg tool_type)"
+          parent="$(arg robot_prefix)toolchanger_connect"
+          robot_prefix="$(arg robot_prefix)"
+          />
+
+
+  <!-- add default kinematic static chains -->
+  <link name="$(arg robot_prefix)world" />
+  <link name="$(arg robot_prefix)tcp"/>
+
+  <!--- world -> cobot joint-->
+  <joint name="$(arg robot_prefix)world_joint" type="fixed">
+    <parent link="$(arg robot_prefix)world" />
+    <child link = "$(arg robot_prefix)base_link" />
+    <origin xyz="$(arg pos_x) $(arg pos_y) $(arg pos_z)" rpy="$(arg roll) $(arg pitch) $(arg yaw)" />
+  </joint>
+
+  <!-- robot ee->TCP joint -->
+  <joint name="$(arg robot_prefix)ee_to_tcp" type="fixed">
+  	<origin rpy="$(arg rpy_tcp) " xyz="$(arg xyz_tcp)"/>
+    <parent link="$(arg robot_prefix)ee_link"/>
+    <child link="$(arg robot_prefix)tcp"/>
+  </joint>
+
+
+
+</robot>

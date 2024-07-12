@@ -1,0 +1,33 @@
+
+# Position Controllers ---------------------------------------
+wsg_50_l:
+ type: "velocity_controllers/JointPositionController"
+ joint: wsg_50_base_joint_gripper_left
+ pid: {p: 300.0, i: 0.01, d: 10.0}
+wsg_50_r:
+ type: "velocity_controllers/JointPositionController"
+ joint: wsg_50_base_joint_gripper_right
+ pid: {p: 300.0, i: 0.01, d: 10.0}
+dependent_joints:
+ wsg_50_base_joint_gripper_left: {parent: wsg_50_base_joint_gripper_right, factor: -1 }
+
+
+
+# gripper via Trajectory Controller 
+eff_joint_traj_controller:
+  type: velocity_controllers/JointTrajectoryController
+  joints: 
+   - wsg_50_base_joint_gripper_left
+   - wsg_50_base_joint_gripper_right
+  gains: # Note: these values should never be applied on the actual robot
+    wsg_50_base_joint_gripper_left:  {p: 40000.0, d: 2000.0,  i: 100.0, i_clamp: 1}
+    wsg_50_base_joint_gripper_right: {p: 40000.0, d: 2000.0,  i: 100.0, i_clamp: 1}    
+  constraints:
+    goal_time: 0.6
+    stopped_velocity_tolerance: 0.05
+    wsg_50_base_joint_gripper_left:  {trajectory: 0.2,  goal: 0.1}
+    wsg_50_base_joint_gripper_right: {trajectory: 0.2,  goal: 0.1}    
+  state_publish_rate:  125            # Override default
+  action_monitor_rate: 10            # Override default
+  stop_trajectory_duration: 0.5        # Override default
+

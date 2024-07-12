@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<launch>   
+   <arg name="robot_ns"/>
+   <arg name="robot_name_prefix" default=""  
+        doc="robot name prefix. Required if robot URDF has a prefix variable set. Expcects corrrect config files to be present at $(find hrr_cobot_moveit_config)/name_specific_config"/> 
+   <arg name="use_wsg_gripper"       default="false" doc="flag to enable WSG 50 gripper"/>
+   <arg name="pipeline"              default="ompl" doc="choose planning pipeline: OMPL, chomp, stomp"/>
+   <arg name="debug"                 default="false" doc="enable debug output for movegroup"/>
+   <arg name="fake_execution"        default="false" doc="run fake controller instead of forwarding commands to actual robot controller"/>
+   <arg name="fake_controllers_file" default="$(find hrr_cobot_moveit_config)/name_specific_config/fake_controllers.yaml" doc="fake controllers (ignored if fake_execution is false!)"/>
+   <arg name="ros_controllers_file"  default="$(find hrr_cobot_moveit_config)/name_specific_config/ros_controllers.yaml"  doc="ros controllers (ignored if fake_execution is true!)"/>      
+   <!-- optional arguments to be added here (currently set to default values in move group.launch)-->
+   <!-- <arg name="max_safe_path_cost" default="1"/> -->
+   <!-- <arg name="jiggle_fraction" default="0.05" /> -->  
+   <!-- <arg name="publish_monitored_planning_scene" default="true"/> -->
+   <!-- <arg name="capabilities" default=""/>   -->
+  
+   <!-- Load planning context -->
+   <include file="$(find hrr_cobot_moveit_config)/launch/settings/planning_context.launch.xml">		
+		<arg name="prefix" value="$(arg robot_name_prefix)"/>
+		<arg name="gripper" value="$(arg use_wsg_gripper)"/>        
+   </include>
+
+   <group ns="$(arg robot_ns)">
+      <!-- load plannign pipeline parameters -->   
+      <include ns="move_group" file="$(find hrr_cobot_moveit_config)/launch/settings/$(arg pipeline).launch.xml"/>
+         
+      <!-- launch move group -->
+      <include file="$(find hrr_cobot_moveit_config)/launch/move_group.launch">      
+         <arg name="allow_trajectory_execution" value="true"/>      
+         <arg name="debug"                      value="$(arg debug)"/>      
+         <arg name="fake_execution"             value="$(arg fake_execution)"/>
+         <arg name="fake_controllers_file"      value="$(arg fake_controllers_file)"/>
+         <arg name="ros_controllers_file"       value="$(arg ros_controllers_file)"/>   
+      </include>
+   </group>
+</launch>

@@ -1,0 +1,8 @@
+numpy~=1.20.3
+scipy~=1.7.2
+quaternion~=2021.11.4.15.26.3
+typing~=3.7.4.3
+click~=7.1.2
+tqdm~=4.61.0
+catkin_pkg~=0.4.24
+rospkg~=1.2.9

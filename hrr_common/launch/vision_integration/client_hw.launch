@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!-- None Real-time client launch file
+ This file launches the default helpers and utilities needed on a non-RT client that communicates with the COMAU Racer 5 disassembly station
+
+  - optionally launches a rosbag recorder
+  - if a camera rosbag file is provided, the offline cam is simulated via the ``offline_cam`` launch file
+-->
+<launch>
+    <!-- arguments -->
+   <arg name="cam_rosbag"    default=""     doc="optional offline camera rosbag. If not empty, cam faker is started"/>
+   <arg name="record_rosbag" default="true" doc="start rosbage recorder with default settings"/>
+   <arg name="robot_ns"      default="hrr_cobot" doc="robot namespace"/>
+   <arg name="gripper_ns"    default="" doc="WSG 50 DSA finger namespace"/>
+
+   <include if="$(arg record_rosbag)" file="$(find hrr_common)/launch/record_pipeline.launch">
+        <arg name="rosbag_dir"    value="$(env HOME)/Documents/rosbags"/>
+        <arg name="bag_file_name" value="hrr_recorder"/>
+        <arg name="trigger_cmd"   value="record_trigger"/>
+   </include>
+
+   <include if="$(eval arg('cam_rosbag') != '')" file="$(find hrr_common)/launch/offline_cam.launch">
+       <arg name="rosbag_file"    value="$(arg cam_rosbag)"/>
+   </include>
+</launch>

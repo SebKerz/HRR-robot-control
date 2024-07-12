@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+import click
+import pickle
+import pathlib
+
+import numpy as np
+import matplotlib.pyplot as plt
+import quaternion
+import rospy
+
+from hrr_common.ros_utils import fix_prefix, TfHandler
+from hrr_common.utils import get_axis, load_pickle
+from hrr_controllers.sensor_handles import CalibrationParameters
+
+
+def plot_calibration(F_full_msr, F_calibrated, M_calibrated):
+    axs = get_axis("FT measures vs gravitation offset", ncols=1, nrows=3)
+    axs[0].plot(F_full_msr[:, 0:3], alpha=0.7)
+    axs[0].plot(F_calibrated)
+    axs[0].legend(
+        [f"$F_{{{x}, \\mathrm{{raw}}}}$" for x in ("x", "y", "z")] +
+        [f"$F_{{{x}, \\mathrm{{calibrated}}}}$" for x in ("x", "y", "z")],
+        ncol=2)
+    axs[0].set_title(f'Force regression results')
+
+    axs[1].plot(F_full_msr[:, 3:6], alpha=0.7)
+    axs[1].plot(M_calibrated)
+    axs[1].legend(
+        [f"$M_{{{x}, \\mathrm{{raw}}}}$" for x in ("x", "y", "z")] +
+        [f"$M_{{{x}, \\mathrm{{calibrated}}}}$" for x in ("x", "y", "z")],
+        ncol=2)
+    axs[1].set_title(f'Torque regression results')
+
+    axs[2].plot(F_full_msr[:, 0:3] - F_calibrated)
+    axs[2].plot(F_full_msr[:, 3:6] - M_calibrated)
+    axs[2].legend(
+        [f"$\\varepsilon_{{f, {x}}}$" for x in ("x", "y", "z")] +
+        [f"$\\varepsilon_{{\\tau, {x}}}$" for x in ("x", "y", "z")],
+        ncol=2
+    )
+    axs[2].set_title(f'Residuals after calibration')
+    return axs
+
+
+def open_calibration_data(file):
+    file = pathlib.Path(file)
+    if file.exists():
+        return np.load(str(file), allow_pickle=True).item()
+
+
+def visualize_calibration_data(R_FT_E, calibration_data_file, calibration_param_file, ros_param_ns):
+    rospy.loginfo(f"open calibration file {calibration_data_file} and parameter-file {calibration_param_file}")
+    data = open_calibration_data(calibration_data_file)
+    try:
+        F_full_msr = np.vstack([x.wrench for x in data]) if isinstance(data, (list, tuple)) else data.wrench
+    except AttributeError:
+        data = data.all_data
+        F_full_msr = data.wrench
+    try:
+        parameters = load_pickle(calibration_param_file)  # type: CalibrationParameters
+        B_grav = parameters.B_grav_vec
+        FT_com = parameters.FT_com
+        bias = parameters.bias
+    except (FileNotFoundError, TypeError) as e:
+        rospy.logerr(f"could not open {calibration_param_file} due to {e}")
+        ros_param_ns = fix_prefix(ros_param_ns)
+        B_grav = np.array(rospy.get_param(f"{ros_param_ns}B_grav"))
+        FT_com = np.array(rospy.get_param(f"{ros_param_ns}com"))
+        bias = np.zeros(6)
+        bias[0:3] = rospy.get_param(f"{ros_param_ns}bias/force")
+        bias[3:6] = rospy.get_param(f"{ros_param_ns}bias/torque")
+
+    R_B_E = np.vstack([x.R for x in data]) if isinstance(data, (list, tuple)) else data.R
+    R_FT_B = np.einsum('ij, dkj -> dik', R_FT_E, R_B_E)  # equals:  R_FT_E @ R_B_E.T in batched manner
+    plt.ion()
+    plot_calibration(F_full_msr, F_calibrated=R_FT_B @ B_grav + bias[None, 0:3],
+                     M_calibrated=np.cross(FT_com, R_FT_B @ B_grav) + bias[None, 3:6])
+    plt.show(block=True)
+
+
+@click.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
+@click.argument('calibration-recording-file', type=click.Path(exists=True))
+@click.option('-p', '--calibration-parameter-file', help="file to load calibration parameters from",
+              type=click.Path(exists=True))
+@click.option('-f', '--FT-link-name', help="FT-link name", type=str, default="hrr_cobot.jr3msr")
+@click.option('-e', '--EE-link-name', help="robot ee-link name", type=str, default="hrr_cobot.ee_link")
+def main(calibration_recording_file, calibration_parameter_file, ft_link_name, ee_link_name):
+    """
+    Plot calibration recording, where the `calibration_recording_file` contains the data measurement
+    recordings during the calibration run.
+    """
+    tf = TfHandler(add=False)
+    cobot_ns = fix_prefix(rospy.get_param("/cobot_ns"))
+    _, q = tf.T_A_B(A=rospy.get_param(f"{cobot_ns}ft_link", ft_link_name),
+                    B=rospy.get_param(f"{cobot_ns}ee_link", ee_link_name))
+    R_FT_E = quaternion.as_rotation_matrix(q)
+    rospy.loginfo(f"R_FT_E:\n{R_FT_E}")
+    visualize_calibration_data(R_FT_E=R_FT_E,
+                               calibration_data_file=calibration_recording_file,
+                               calibration_param_file=calibration_parameter_file,
+                               ros_param_ns=f"{cobot_ns}ft_sensor")
+
+
+if __name__ == "__main__":
+    rospy.init_node("ft_calibration_visualizer")
+    main()

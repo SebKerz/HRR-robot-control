@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="robot_prefix" default="" doc="prefix for URDF joint / link names"/>
+    <arg name="use_hw" default="false" doc="start actual robot platform"/>
+    <arg name="use_cobot" default="false" doc="flag to use Racer 5 cobot instead of Racer 5 0.80"/>
+    <arg name="tum_lab" default="false" doc="TUM-lab configuration"/>
+    <arg name="ros_ns" default="/" doc="ros namespace (only needed for simulation in gazebo with multiple robots)"/>
+
+    <arg name="pos_x" default="0.0" doc="world->base translation in x"/>
+    <arg name="pos_y" default="0.0" doc="world->base translation in y"/>
+    <arg name="pos_z" default="0.0" doc="world->base translation in z"/>
+    <arg name="roll" default="0.0" doc="world->base rotation in roll"/>
+    <arg name="pitch" default="0.0" doc="world->base translation pitch"/>
+    <arg name="yaw" default="0.0" doc="world->base translation yaw"/>
+
+    <arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface" doc="transmission interface (sim only)"/>
+
+    <arg name="xyz_tcp" default="0 0 0" doc="translation from ee-link to tool center point"/>
+    <arg name="rpy_tcp" default="0 0 0" doc="rotation from ee-link to tool center point (rpy)"/>
+    <arg name="rpy_ft" default="0 0 0.7853981633974483" doc="rotation from ee to ft-sensor (rpy)"/>    
+    <arg name="ft_flipped" default="0" doc="integer flag to flip FT-sensor by 180 degree"/>
+    <arg name="tool_name" default="" doc="current tool type"/>
+    <arg name="robot_name" default="hrr_cobot"/>
+
+    <!-- set tool type from name
+   * 1 := DEPRECATED kept as WSG_50 for laziness
+   * 2 := WSG 50 DSA
+   * 3 := Shaftgrinder
+   * 4 := Screwdriver
+   * 5 := Vacuum gripper
+  -->
+    <arg name="valid_tool" value="$(eval tool_name == 'wsg_50' or tool_name == 'wsg_50_dsa' or tool_name == 'shaftgrinder' or tool_name == 'screwdriver' or tool_name == 'vacuum')"/>
+    <param if="$(arg valid_tool)" name="tool_name" value="$(arg tool_name)"/>
+    <param unless="$(arg valid_tool)" name="tool_name" value="nothing"/>
+    <arg if="$(eval arg('tool_name') == 'wsg_50')" name="tool_type" value="1"/>
+    <arg if="$(eval arg('tool_name') == 'wsg_50_dsa')" name="tool_type" value="2"/>
+    <arg if="$(eval arg('tool_name') == 'shaftgrinder')" name="tool_type" value="3"/>
+    <arg if="$(eval arg('tool_name') == 'screwdriver')" name="tool_type" value="4"/>
+    <arg if="$(eval arg('tool_name') == 'vacuum')" name="tool_type" value="5"/>
+    <arg unless="$(arg valid_tool)" name="tool_type" value="0"/>
+
+    <group if="$(eval ('tool_name') != 0)" ns="$(arg ros_ns)">
+        <param name="tool_name" type="str" value="$(arg tool_name)"/>
+    </group>
+
+    <!-- set robot description file as needed -->
+    <arg if="$(eval arg('use_hw') and arg('use_cobot'))" name="description_file" value="$(find hrr_common)/description/hw_hrr_cobot.xacro" />
+    <arg if="$(eval arg('use_hw') and not arg('use_cobot'))" name="description_file" value="$(find hrr_common)/description/hw_hrr_0_80_cobot.xacro" />
+    <arg if="$(eval not arg('use_hw') and not arg('use_cobot'))" name="description_file" value="$(find hrr_common)/description/sim_hrr_0_80_cobot.xacro" />
+    <arg if="$(eval not arg('use_hw') and arg('use_cobot'))" name="description_file" value="$(find hrr_common)/description/sim_hrr_cobot.xacro" />
+    
+    <!-- set pilot setup flag -->
+    <arg if="$(eval not arg('tum_lab'))" name="pilot" value="1"/>
+    <arg if="$(eval arg('tum_lab'))" name="pilot" value="0"/>
+
+    <param name="name" type="str" value="$(arg robot_name)"/>
+    <param name="robot_description" command="$(find xacro)/xacro $(arg description_file) pos_x:=$(arg pos_x) pos_y:=$(arg pos_y) pos_z:=$(arg pos_z) roll:=$(arg roll) pitch:=$(arg pitch) yaw:=$(arg yaw) transmission_hw_interface:=$(arg transmission_hw_interface) xyz_tcp:='$(arg xyz_tcp)' rpy_tcp:='$(arg rpy_tcp)' rpy_ft:='$(arg rpy_ft)' ft_flipped:=$(arg ft_flipped) tool_type:=$(arg tool_type) robot_prefix:='$(arg robot_prefix)' no_fucks_given:='$(arg pilot)'"/>
+
+</launch>

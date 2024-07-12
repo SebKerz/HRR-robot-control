@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!--
+  Simulate a single Comau Racer 5 Cobot in Mujoco
+
+  Defaults provided for COMAU RACER 5:
+   - use_rviz:   enable rviz for visualization / debugging. Defaults to True.
+   - use_gz:     start gzclient upon launch. Defeults to True
+   - use_moveit: start Robot with dedicated moveit configuation
+   - robot_name: robot name (also namespace) for the spawned robot.
+-->
+<launch>
+  <arg name="robot_name" default="racer5" doc="robot name. Requires a hw_if_controllers_robot_name.yaml file to exist"/>
+  <arg name="use_rviz" default="false" doc="start rviz"/>
+  <arg name="use_db"   default="true" doc="launches a database stored in 'db_path'"/>
+  <arg name="rviz_name" default="mujoco_sim" doc="rviz file name" />
+  <arg name="controllers" default="joint_state_controller joint_trajectory_controller"
+       doc="list of controllers loaded and enabled upon start"/>
+  <arg name="db_path" default="$(find racer5_support)/data/simu_mongo_db" doc="path to database"/>
+  <arg name="robot_model_path" default="/tmp/mujoco/mj_racer_cobot.xml" doc="path of mujoco model xml"/>
+  <arg name="key_path" default="$(env HOME)/.mujoco/mjkey.txt" doc="path to mjkey. Requieres HOME variable to be set"/>
+  <env name="ROSCONSOLE_CONFIG_FILE"
+       value="$(find racer5_sim)/config/rosconsole.conf"/>
+
+  <param name="use_sim_time" value="true"/>
+  <include file="$(find racer5_sim)/launch/mujoco.robot.include">
+     <arg name="robot_name" value="$(arg robot_name)"/>
+     <arg name="robot_model_path" value="$(arg robot_model_path)"/>
+     <arg name="key_path" value="$(arg key_path)"/>
+  </include>
+
+  <!-- launch rviz -->
+  <include if="$(arg use_rviz)" file="$(find racer5_support)/launch/rviz.launch.include">
+    <arg name="config" value="true"/>
+    <arg name="rviz_file" value="$(arg rviz_name)"/>
+  </include>
+<!-- CONFIGURATION GRIPPERS-->
+  <include file="$(find racer5_cobot_moveit_config)/launch/warehouse_db.launch" if="$(arg use_db)">
+    <arg name="moveit_warehouse_db_path" value="$(arg db_path)"/>
+  </include>
+
+ </launch>

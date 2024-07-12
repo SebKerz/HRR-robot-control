@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="shaftgrinder">
+
+
+  <xacro:include filename="$(find hrr_ee_tools)/description/screwdriver.xacro"/>
+  <xacro:include filename="$(find hrr_ee_tools)/description/shaftgrinder.xacro"/>
+  <xacro:include filename="$(find hrr_ee_tools)/description/vacuum.xacro"/>
+  <xacro:include filename="$(find hrr_ee_tools)/description/toolchanger.xacro"/>
+  <xacro:include filename="$(find hrr_common)/description/connectors/connector_gripper_silver.xacro"/>
+  <xacro:include filename="$(find wsg_50_description)/model/wsg_50.urdf.xacro"/>
+
+  <xacro:macro name="hrr_tool"
+               params="tool_type parent robot_prefix:=''
+                       rpy_gripper:='0 0 0'">
+
+    <!-- 1,2 => WSG 50 -->
+    <xacro:if value="$(eval ${tool_type} == 1)">
+      <xacro:wsg_50 parent="${parent}" prefix="${robot_prefix}" rpy="${rpy_gripper}" finger_type="dsa"/>
+    </xacro:if>
+
+    <xacro:if value="$(eval ${tool_type} == 2)">
+      <xacro:wsg_50 parent="${parent}" prefix="${robot_prefix}" rpy="${rpy_gripper}" finger_type="dsa"/>
+    </xacro:if>
+
+    <!-- 3=> Shaftgrinder -->
+    <xacro:if value="$(eval ${tool_type} == 3)">
+      <xacro:shaftgrinder parent="${parent}" prefix="${robot_prefix}"/>
+    </xacro:if>
+
+    <!-- 4 => Screwdriver-->
+    <xacro:if value="$(eval ${tool_type} == 4)">
+      <xacro:screwdriver parent="${parent}" prefix="${robot_prefix}"/>
+    </xacro:if>
+
+    <!-- 5 => Vacuum Gripper-->
+    <xacro:if value="$(eval ${tool_type} == 5)">
+      <xacro:vacuum parent="${parent}" prefix="${robot_prefix}"/>
+    </xacro:if>
+
+
+  </xacro:macro>
+
+  </robot>

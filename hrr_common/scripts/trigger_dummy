@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import sys
+import rospy
+from std_msgs.msg import Bool
+
+from hrr_common.ros_utils import goodbye
+
+
+def get_input(msg, *args, **kwargs):
+    try:
+        return raw_input(msg, *args, **kwargs)
+    except:
+        return input(msg, *args, **kwargs)
+
+
+def get_msg(rec):
+    if rec:
+        return 'Stop recording by pressing <Enter>\n'
+    return 'Hit <Enter> to start recording\n'
+
+
+rospy.init_node("RecordTrigger")
+rospy.loginfo("Starting record trigger")
+trigger_topic = rospy.get_param("~trigger_topic", "/record_trigger")
+# todo: use service client instead!
+rec_trigger_flag = rospy.Publisher(trigger_topic, Bool, queue_size=100)
+record = False
+try:
+    while not rospy.is_shutdown():
+        key = "fakecontent"
+        while key != "":
+            key = get_input(get_msg(record))
+        record = not record
+        rec_trigger_flag.publish(Bool(True))
+except (KeyboardInterrupt, SystemExit):
+    rospy.on_shutdown(goodbye)
+    sys.exit(1)

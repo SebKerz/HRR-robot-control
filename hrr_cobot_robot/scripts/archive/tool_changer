@@ -1,0 +1,72 @@
+#!/usr/bin/env zsh
+# get ROS-parameters
+{ cobot_ns=$(rosparam get /cobot_ns) } || { cobot_ns="/hrr_cobot" }
+{ urdf_prefix=$(rosparam get ${cobot_ns}/urdf_prefix) } || {urdf_prefix="" }
+{ tool_name=$(rosparam get ${cobot_ns}/tool_name) } || { tool_name="nothing" }
+{ robot_name=$(rosparam get ${cobot_ns}/name) } || { robot_name="hrr_cobot" }
+{ gripper_ns=$(rosparam get ${cobot_ns}/gripper_ns) } || { gripper_ns="gripper_ns" }
+
+gripper_node="${cobot_ns}/${gripper_ns}"
+rosparam set /wsg_node_name "${gripper_node}"
+
+function info(){
+python -c "import rospy
+rospy.loginfo('${1}')"
+}
+
+function warn(){
+python -c "import rospy
+rospy.logwarn('${1}')"
+}
+
+# check for current setup
+if [ -n "$(export | grep ROS_IP | grep 129.187. )" ]; then
+   tum_lab="true"
+else
+   tum_lab="false"
+fi
+
+# start gripper driver if needed
+if [[ ${tool_name} == "wsg_50_dsa" ]]; then
+#     if [[ $(rostopic list | grep "${cobot_ns}/gripper/status") ]]; then
+#         # add default behavior if gripper is active
+#     else
+        {
+            roslaunch hrr_cobot_robot hrr_wsg_50.launch "cobot_ns:=${cobot_ns}" &>/dev/null &
+            info "started gripper controller. wait 1 seconds for init"
+            sleep 1
+        } || {
+            warn "failed to launch DSA-gripper driver"
+        }
+#    fi
+else
+    if [[ $(rostopic list | grep "${gripper_node}/status") ]]; then
+        {
+            rosnode kill "${gripper_node}"
+        } || {
+             warn "failed to disable gripper-driver"
+        }
+    fi
+fi
+
+# update robot URDF
+{
+    info "trying to update robot_description for ${robot_name} to tool ${tool_name}"
+    roslaunch hrr_common hrr_cobot.launch \
+        "tool_name:=${tool_name}" "cobot_ns:=${cobot_ns}" \
+        "tum_lab:=${tum_lab}" \
+        "robot_prefix:='${urdf_prefix}'" "robot_name:=${robot_name}" "use_hw:=true"  &>/dev/null &
+    info "updated robot_description for ${robot_name} with tool ${tool_name}"
+} || {
+    warn "failed to launch new URDF"
+}
+
+info "updated URDF, wait 1 second to restart state-publisher"
+sleep 1
+
+# restart robot state publisher
+{
+    rosrun hrr_cobot_robot robot_state_publisher_restarter > /dev/null &
+} || {
+    warn "failed to (re)start robot_state_publisher"
+}

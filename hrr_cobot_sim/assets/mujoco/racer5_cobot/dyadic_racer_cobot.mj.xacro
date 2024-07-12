@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find racer5_sim)/model/mujoco/racer5_cobot.xacro"/>
+  <xacro:include filename="$(find racer5_sim)/model/mujoco/env.xacro"/>
+
+  <!-- use macro for compilation -->
+  <xacro:racer5_compiler dt="0.002"/>
+
+  <!-- robot world constellation --> 
+  <worldbody>
+    <xacro:m_floor name="floor0" pos="0.8 0.75 0" size="0 0 1"/>
+    <body name="floor0" pos="0.7 0.6 0">
+      <xacro:m_goal name="target0" pos="0 0.0 0.65" size="0.02" />
+   	  <xacro:m_goal name="target1" pos="0 -0.1 0.6" size="0.02" />
+	  <xacro:m_goal name="target2" pos="0 0.1 0.6"  size="0.02" />
+	</body>
+    <xacro:m_table pos="0.7 0.6 0.2" name="table0" size="0.3 0.4 0.2"/>
+    <light directional="true" ambient="0.2 0.2 0.2" diffuse="0.8 0.8 0.8" 
+           specular="0.3 0.3 0.3" castshadow="false" pos="0 0 4" dir="0 0 -1" name="light0"></light>
+      <xacro:racer5_body name="racer5_0" xyz="0.2 0.5 0.0" group="0"/>      
+      <xacro:racer5_body name="racer5_1" xyz="1.2 0.7 0.0" rpy="0.0 0.0 -${M_PI}" group="1"/>
+   </worldbody>
+   
+    <!-- world assets --> 
+    <xacro:m_scene_include/>
+    <xacro:racer5_meshes/>
+	<xacro:racer5_materials name="racer5_0"/>
+    <xacro:racer5_materials name="racer5_1"/>
+	<xacro:racer5_joint_control name="racer5_0" group="0"/>
+    <xacro:racer5_joint_control name="racer5_1" group="1"/>
+    <!-- define legal constraint violations -->
+    <default>
+        <default class="racer5_0_body">
+            <geom margin="0.001" material="racer5_geomMat" rgba="1 1 1 1" solimp="0.99 0.99 0.01" solref="0.01 1" type="mesh" user="0"></geom>
+            <joint armature="1" damping="500" frictionloss="0" stiffness="0"></joint>
+          <xacro:colors/>          
+        </default>
+        <default class="racer5_1_body">
+		  <joint armature="1" damping="500" frictionloss="0" stiffness="0"></joint>
+        </default>
+    </default>
+</mujoco>

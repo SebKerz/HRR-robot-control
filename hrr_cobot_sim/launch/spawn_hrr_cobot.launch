@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<launch>
+
+  
+  <arg name="robot_prefix"  default=""      doc="prefix for URDF joint / link names"/>  
+  <arg name="use_cobot"     default="false" doc="flag to use Racer 5 cobot instead of Racer 5 0.80"/>  
+  <arg name="ros_ns"        default="/"     doc="ros namespace (only needed for simulation in gazebo with multiple robots)"/>
+  <arg name="gripper_ns"    default="wsg_50" doc="ros (sub-)namespace gor gripper"/>
+
+  <arg name="pos_x"         default="0.0"   doc="world->base translation in x"/>
+  <arg name="pos_y"         default="0.0"   doc="world->base translation in y"/>
+  <arg name="pos_z"         default="0.0001"   doc="world->base translation in z"/>
+  <arg name="roll"          default="0.0"      doc="world->base rotation in roll"/>
+  <arg name="pitch"         default="0.0"      doc="world->base translation pitch"/>
+  <arg name="yaw"           default="0.0"   doc="world->base translation yaw"/>
+  
+  <arg name="transmission_hw_interface" default="hardware_interface/PositionJointInterface" doc="transmission interface (sim only)"/>
+
+  <arg name="xyz_tcp"       default="0 0 0" doc="translation from ee-link to tool center point"/>  
+  <arg name="rpy_tcp"       default="0 0 0" doc="rotation from ee-link to tool center point (rpy)"/>
+  <arg name="xyz_ft"        default="0 0 0" doc="translation from ee to ft-sensor"/>  
+  <arg name="rpy_ft"        default="0 0 0.7853981633974483" doc="rotation from ee to ft-sensor (rpy)"/>  
+  <arg name="ft_flipped"    default="0"     doc="integer flag to flip FT-sensor by 180 degree"/>
+  <arg name="wsg_version"   default="-1"     doc="integer customization flag. see wsg_50_description. -1 := no gripper"/>
+  <arg name="robot_name"    default="hrr_cobot"/>  
+
+
+  <arg name="controller_file"   default="$(find hrr_cobot_sim)/config/sim_controllers.yaml"
+      doc="path to simulation controller param file"/>
+  <arg name="controllers" doc="Controllers that are activated by default."
+       default="joint_state_controller joint_trajectory_controller"/>
+  <arg name="gripper_config_file"   default="$(find hrr_cobot_sim)/config/sim_gripper.yaml"
+      doc="path to simulation controller param file"/>
+
+       
+  <group ns="$(arg ros_ns)">
+    <rosparam file="$(arg gripper_config_file)" command="load" ns="$(arg gripper_ns)"/>
+    <include file="$(find hrr_common)/launch/hrr_cobot.launch">
+      <arg name="robot_name" value="$(arg robot_name)"/>
+      <arg name="robot_prefix" value="$(arg robot_prefix)"/>
+      <arg name="transmission_hw_interface" value="$(arg transmission_hw_interface)"/>      
+      <arg name="use_cobot" value="$(arg use_cobot)"/>
+      <arg name="pos_x"     value="$(arg pos_x)"/>
+      <arg name="pos_y"     value="$(arg pos_y)"/>
+      <arg name="pos_z"     value="$(arg pos_z)"/>
+      <arg name="roll"      value="$(arg roll)"/>
+      <arg name="pitch"     value="$(arg pitch)"/>
+      <arg name="yaw"       value="$(arg yaw)"/>
+      <arg name="xyz_tcp"   value="$(arg xyz_tcp)"/>
+      <arg name="rpy_tcp"   value="$(arg rpy_tcp)"/>
+      <arg name="xyz_ft"    value="$(arg xyz_ft)"/>
+      <arg name="rpy_ft"    value="$(arg rpy_ft)"/>      
+      <arg name="wsg_version" value="$(arg wsg_version)"/>
+      <arg name="ft_flipped"  value="$(arg ft_flipped)"/>
+      <arg name="use_hw"      value="false"/>
+    </include>
+   
+    <!-- spawn robot in gazebo -->
+    <node name="spawn_robot_model" pkg="gazebo_ros" type="spawn_model" 
+          args="-param robot_description 
+              -urdf
+              -model $(arg robot_name)"
+          respawn="false" output="screen" />
+
+    <rosparam file="$(arg controller_file)" command="load"/>
+
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"/>
+    <node name="controller_spawner" pkg="controller_manager"  type="spawner" 
+          respawn="false" output="screen" args=" $(arg controllers)"/>
+  </group>
+
+</launch>

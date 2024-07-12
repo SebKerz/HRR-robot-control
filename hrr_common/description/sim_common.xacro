@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="hrr-cobot">  
+  
+  <!-- Include common -->
+  <xacro:include filename="$(find hrr_common)/description/common.xacro"/>
+  <xacro:arg name="robot_prefix" default=""/>
+  <xacro:include filename="$(find comau_description)/urdf/common.gazebo.xacro" />
+ 
+      <!-- Include JR3 - TO BE REPLACED BY SCHUNK SENSOR-->
+  <xacro:include filename="$(find jr3)/description/jr3.gazebo.xacro"/>  
+
+  <xacro:property name="tmp_ns" value="$(arg ros_ns)"/>
+
+  <xacro:unless value="${tmp_ns == ''}">
+	  <xacro:jr3_gazebo_ns name="$(arg robot_prefix)jr3" ns="$(arg ros_ns)"/>
+  </xacro:unless>
+  <xacro:if value="${tmp_ns != '' }">
+  	<xacro:jr3_gazebo name="$(arg robot_prefix)jr3"/>
+  </xacro:if>
+
+</robot>

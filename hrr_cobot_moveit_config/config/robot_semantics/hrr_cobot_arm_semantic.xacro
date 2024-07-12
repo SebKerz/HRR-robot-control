@@ -1,0 +1,6 @@
+<?xml version="1.0"?> 
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="hrr-cobot"> 
+   <xacro:arg name="prefix" default=""/>
+   <xacro:include filename="$(find hrr_cobot_moveit_config)/config/robot_semantics/racer5_semantic.xacro" />
+   <xacro:racer5/>
+</robot>

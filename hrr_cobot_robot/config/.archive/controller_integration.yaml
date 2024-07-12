@@ -1,0 +1,82 @@
+loop_hz: &robot_loop_hz 200
+read_loop_hz: &robot_read_loop_hz 200
+# Publish all joint states ----------------------------------
+joint_state_controller:
+   type:         joint_state_controller/JointStateController
+   publish_rate: *robot_read_loop_hz
+
+comau_robot_state_controller:
+   type:          hrr_controllers/TP5StateController
+   robot_hw_name: comau_driver
+   publish_rate:  *robot_read_loop_hz
+
+cartesian_state_controller:
+   type:          hrr_controllers/CartesianStateController
+   hw_name:       tcp_controller
+   publish_rate:  *robot_read_loop_hz
+   base_frame:    base_link
+   target_frame:  tcp_controller
+
+
+
+# hybrid force-velocity controller
+sensor_track_compliant_controller:
+   type: hrr_controllers/CompliancePoseController
+   sns_trk_hw_name: tcp_controller
+   base_frame: base_link
+   target_frame: tcp_controller
+   debug: true
+   cmd_topic_name: tcp_v_cmd
+   ee_v_max: 0.2
+   dead_man_timeout: 0.1
+   wrench_cur_topic_name: "/hrr_cobot/ft_calibrator/B_F_ext"
+   control_select_topic_name: "S"
+   full_cmd_topic_name: "hybrid_ctrl_cmd"
+   f_max: 80.0
+   m_max: 80.0
+   publish_ft: true
+   loop_hz: *robot_loop_hz
+
+ft_calibrator:
+   read_ft: true
+   cmd_sns_vel: true
+   cmd_sns_compl: false
+   read_tp5: true
+   use_joint_traj_handler: true
+   sns_link_name: tcp_controller
+   base_link: base_link
+   ft_link: jr3msr
+   tip_link: tcp_controller
+   v_max: 0.1
+   omega_max: 0.1
+
+# feedforward velocity-controller
+sensor_track_velocity_controller:
+   type: hrr_controllers/SnsTrkVelocityPoseController
+   sns_trk_hw_name: tcp_controller
+   base_frame: base_link
+   debug: false
+   target_frame: tcp_controller
+   cmd_topic_name: tcp_v_cmd
+   ee_v_max: 0.2
+   dead_man_timeout: 0.1
+   loop_hz: *robot_loop_hz
+
+
+# Joint Trajectory Loader Handler
+joint_trajectory_handler:
+   type: comau_controllers/JointTrajectoryHandler
+   hw_trajectory_handle: hrr_cobot
+   publish_rate: 50
+
+# Joint Trajectory Loader Handler
+cartesian_trajectory_handler:
+   type: comau_controllers/CartesianTrajectoryHandler
+   hw_trajectory_handle: tcp_controller
+   publish_rate: 50
+
+ft_state_controller:
+  type: force_torque_sensor_controller/ForceTorqueSensorController
+  publish_rate: &sensor_hz 1000
+
+

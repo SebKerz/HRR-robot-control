@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<mujoco xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- mujoco xml utils -->
+   <xacro:macro name="colors">
+    <default class="comau_grey">
+      <geom rgba="0.50196 0.50196 0.50196 1"/>
+    </default>
+    <default class="comau_dark_grey">
+      <geom rgba="0.25098 0.25098 0.25098 1" />
+    </default>
+    <default class="comau_blue">
+      <geom rgba="0.086 0.506 0.767 1.0"/>
+    </default>
+   </xacro:macro>
+
+   <xacro:macro name="comau_meshes">
+	<asset>
+		<mesh file="base_link.STL"  name="comau:base_link"></mesh>
+		<mesh file="link_1.STL"     name="comau:link_1"></mesh>
+		<mesh file="link_2.STL"     name="comau:link_2"></mesh>
+		<mesh file="link_3.STL"     name="comau:link_3"></mesh>
+		<mesh file="link_4.STL"     name="comau:link_4"></mesh>
+		<mesh file="link_5.STL"     name="comau:link_5"></mesh>
+		<mesh file="link_6.STL"     name="comau:link_6"></mesh>
+	</asset>
+   </xacro:macro>
+
+   <xacro:macro name="comau_materials" params="prefix">
+	<asset>
+        <material name="${name}_flange_mat"   shininess="0.03" specular="0.4" reflectance="0"></material>
+        <material name="${name}_arm_mat_low"  shininess="0.03" specular="0.4" reflectance="0"></material>     
+        <material name="${name}_arm_mat_high" shininess="0.03" specular="0.4" reflectance="0"></material>     
+        <material name="${name}_base_mat"     shininess="0.03" specular="0.4" reflectance="0"></material>
+	</asset>
+   </xacro:macro>
+
+	<xacro:macro name="jnt_contact_excludes" params="prefix">
+     <contact>
+         <exclude body1="${name}_base_link" body2="${name}_link_1"></exclude>
+         <exclude body1="${name}_link_1"    body2="${name}_link_2"></exclude>
+         <exclude body1="${name}_link_2"    body2="${name}_link_3"></exclude>
+         <exclude body1="${name}_link_2"    body2="${name}_link_4"></exclude>
+         <exclude body1="${name}_link_3"    body2="${name}_link_4"></exclude>
+         <exclude body1="${name}_link_4"    body2="${name}_link_5"></exclude>
+         <exclude body1="${name}_link_4"    body2="${name}_link_6"></exclude>
+         <exclude body1="${name}_link_5"    body2="${name}_link_6"></exclude>
+     </contact>
+	</xacro:macro>
+
+  <xacro:macro name="flange_sensor" params="prefix">
+    <sensor>
+		<force name="${name}_force_sensor" site="${name}_touch"/>
+		<torque name="${name}_torque_sensor" site="${name}_touch"/>
+    	<touch name="${name}_flange_sensor" site="${name}_touch"/>
+    </sensor>
+  </xacro:macro>
+
+  <!-- scene extensions to create simple setups -->
+  <xacro:macro name="m_scene_include">
+    <asset>
+     <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/> 
+	 <texture name="te_plane" type="2d" builtin="checker" 
+              rgb1=".0 .398 .7441" rgb2="0.    0.3228 0.579"
+              width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>
+     <texture name="te_tum_logo" type="2d" file="tum_logo.png"/>
+     <material name="mat_goal"   reflectance="0"  shininess="0.5"   rgba="0.8937 0.4488 0.1339 1.0" />
+     <material name="mat_table"  texture="te_tum_logo"/>
+     <material name="mat_floor"  reflectance="0.3" texture="te_plane" texrepeat="1 1" texuniform="true"/>
+	</asset>
+  </xacro:macro>
+
+  <xacro:macro name="m_goal" params="prefix pos size:='0.2'">
+     <site name="${name}" pos="${pos}" size="${size} ${size} ${size}" type="sphere" material="mat_goal"></site>
+  </xacro:macro>
+
+  <xacro:macro name="m_table" params="prefix pos size">
+   <body name="${name}" pos="${pos}">
+     <geom size="${size}" type="box" mass="2000" material="mat_table"		  ></geom>
+   </body>
+  </xacro:macro>
+   
+  <xacro:macro name="m_floor" params="prefix pos size">
+    <geom name="${name}" pos="${pos}" size="${size}"
+	      type="plane" condim="3" material="mat_floor"
+		  ></geom>
+  </xacro:macro>
+
+</mujoco>

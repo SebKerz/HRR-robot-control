@@ -1,0 +1,4 @@
+bool bool_initialize
+int16 rpm
+---
+bool success
