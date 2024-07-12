@@ -1,6 +1,9 @@
 # HR-Recycler Cobot package
 
-This meta-package wraps a COMAU-Racer 5 0.80 / Cobot
+This package was developed during the Horizon 2020 project **Hybrid Human-Robot RECYcling plant for electriCal and eLEctRonic equipment**, https://cordis.europa.eu/project/id/820742/results,
+at the Chair of Automatic Control Engineering, Technical University Munich.
+
+It wraps a COMAU-Racer 5 0.80 / Cobot
 with dedicated tools and grippers into a combined robot
 setup in simulation and hardware.
 
