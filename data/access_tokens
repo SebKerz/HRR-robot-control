@@ -1,7 +1,0 @@
-export CI_USER="ros_ci"
-export COMAU_CI_TOKEN="Gnofxzi1zSCkoSQffYxS"
-export COMAU_DATA_CI_TOKEN="glpat-HxHWYNkymYnhnKZdagab"
-export JR3_CI_TOKEN="KzvdtnGrxuEeFLkQyezB"
-export HR_RECYCLER_MSGS_CI_TOKEN="glpat-LNq5S3PZa_8Jsix54yqN"
-export SIM_ROBOTS_CI_TOKEN="cpDYnNH6nqErTKZ_Hss2"
-export WSG_CI_TOKEN="4enLtbtQfTHutDk1jzr-"
