@@ -9,7 +9,7 @@ arduino_node_name: /hrr_cobot/tool_controller  # node name for arduino node
 tool_change_routine:
   tool_change_poses_path: /home/hrr_cobot/_ros/hr_recycler_ws/src/hrr_cobot/hrr_cobot_robot/data/tool_changer
 
-initialize_matlab: True         # enable Matlab based motion planner
+initialize_matlab: True        # enable Matlab based motion planner
 matlab_working_dir: /home/hrr_cobot/_ros/hr_recycler_ws/src/planner/src # working directory for Matlab, put hrr_cobot or schrottgott for pc change
 
 # calibration routine overwrites

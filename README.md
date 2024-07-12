@@ -4,9 +4,6 @@ This meta-package wraps a COMAU-Racer 5 0.80 / Cobot
 with dedicated tools and grippers into a combined robot
 setup in simulation and hardware.
 
-It was developed during the Horizon2020 EU-project Hybrid Human-Robot RECYcling plant for electriCal and eLEctRonic equipment https://cordis.europa.eu/project/id/820742/results
-by the Chair of Automatic Control Engineering at Technical University Munich.
-
 ## Table of Contents
 
 - [HR-Recycler Cobot package](#hr-recycler-cobot-package)
@@ -27,7 +24,7 @@ by the Chair of Automatic Control Engineering at Technical University Munich.
 - ``hrr_controllers`` contains the controller modalities to be used for the HR-Recycler cobot robot.
 - ``hrr_msgs`` contains the custom messages used for the cobot
 
-The documentation is currently internal only:
+The documentation and explanations are gathered / found separately here:
 `<https://hr_recycler.pages.gitlab.lrz.de/>`_.
 
 ## Installation
@@ -65,3 +62,16 @@ building upon the controllers, and collected utils in the
 [```hrr_common``` package documentation](https://hr_recycler.pages.gitlab.lrz.de/hrr_cobot/hrr_common/index.html), the
 [```hrr_cobot_robot``` package documentation](https://hr_recycler.pages.gitlab.lrz.de/hrr_cobot/hrr_cobot_robot/index.html)
 wraps the content together.
+
+Eventually, there exist a collection of jupyter tutorial notebooks in the
+[notebooks](https://git.lsr.ei.tum.de/hr_recycler/hrr_cobot/-/blob/master/notebooks) directory,
+that serve both as a sequential functionality check as well as an introduction for
+the hardware in use.
+
+## Current Issues
+
+- Simulation package only partially maintained. Refer to [sim_robots](https://gitlab.lrz.de/hr_recycler/sim_robots) instead.
+- MoveIT support is broken / not tested / maintained. In particular to be done:
+
+  - [ ] adjust handles from COMAU to current interfaces
+  - [ ] needs rework / fusing with previous states

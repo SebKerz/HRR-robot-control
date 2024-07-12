@@ -34,8 +34,15 @@ class PneumaticFingerActionServer(SkillBase):
         # Hardcoded param, how many meters above the given object center should we go?
         self.safety_distance = 0.03
         # If True then use calibration pose and position from vision only
-        self.hardcoded_orientation = True
-        self.force_sensitive = False  # If True go down until force is felt, otherwise go to exact grasp pose from vision
+        self.hardcoded_orientation = True #Stay on True, orientation based on vision not supported
+        self.turn_maneuver = True # Tries to turn the gripper so that battery is better grasped. If True, then always force sensitive
+        self.force_sensitive = True  # If True go down until force is felt, otherwise go to exact grasp pose from vision
+        self.ee2tip = np.r_[0, 0, -0.234]  # From end effector to tool tip (middle of fingers)
+        self.ee2sidetip = np.r_[0, 0.05, -0.234]  # From end effector to one fingertip
+        self.f_contact = 10  # Contact force (for going down until..)
+        self.speed = 0.1 #AMoving around before and after
+        self.tum_lab = False
+        self.stop_it = False #For cancelling checks
 
     def init_ros(self, action_srv_name):
         """
@@ -65,7 +72,48 @@ class PneumaticFingerActionServer(SkillBase):
 
     def base2tool(self, pose):
         # Transform pose (sm.SE3) from base into vacuum tool tip space
-        return pose @ sm.SE3([0, 0, -0.234])
+        # Input is given pose, output is the pose of the EE such that gripper is at given pose
+        return pose @ sm.SE3(self.ee2tip)
+
+    def move_until_contact(self, goal_pose, force, v_max=0.01):
+        completed = False
+        if not self.stop_it:
+            self.cobot.move_to_pose(goal_pose, v_max=v_max)
+            F0 = np.copy(self.cobot.B_F_msr[:3])
+            for t in range(int(100 * self.cobot.hz)):
+                if not self.action_server_valid:
+                    self.cancel(msg="pneumatic grasping pre-empted")
+                    self.stop_it = True
+                    break
+                elif self.cobot.state is None:
+                    completed = True
+                    rospy.loginfo(f"Movement done, found no contact. Force deviation {self.cobot.B_F_msr[:3] - F0}")
+                    break
+                elif self.cobot.state == "error":
+                    return self.end_skill(msg="Pneumatic grasping failed. Cobot in state 'error'.")
+                elif np.linalg.norm((self.cobot.B_F_msr[:3] - F0) - self.cobot.FT.noise[:3]) >= force:
+                    rospy.loginfo(f"Found contact. Force deviation {self.cobot.B_F_msr[:3] - F0}")
+                    break
+                else:
+                    self.cobot.update()
+        return completed
+
+    def goTo_with_cancel(self, pose, v_max = 0.01):
+        #Like goTo but checks if action server was cancelled or timeout reached.
+        if not self.stop_it:
+            self.cobot.move_to_pose(pose, v_max=v_max)
+            for t in range(int(100 * self.cobot.hz)):
+                if not self.action_server_valid:
+                    self.cancel(msg="pneumatic grasping pre-empted")
+                    self.stop_it = True
+                    break
+                elif self.cobot.state is None:   
+                    return True
+                elif self.cobot.state == "error":
+                    self.end_skill(msg="Vacuum grasping failed. Cobot in state 'error'.")
+                    return False
+                else:
+                    self.cobot.update()
 
     def execute_skill_cb(self, goal: FingerGraspGoal):
         """
@@ -73,6 +121,7 @@ class PneumaticFingerActionServer(SkillBase):
         Args:
 
         """
+        self.stop_it = False
         self.pre_skill_execution()
         self.timeout = goal.timeout
         self.cobot.tool_id = ToolType.WSG_50  # REMOOOVE!!
@@ -86,7 +135,10 @@ class PneumaticFingerActionServer(SkillBase):
         release_center = get_SE3_from_pose_stamped(goal.release_pose)
 
         if self.hardcoded_orientation:
-            grasp_pose = self.cobot.FK(self.cobot.q_calib)
+            if self.tum_lab:
+                grasp_pose = self.cobot.FK(np.r_[0., 0., -1.57079, 0., 1.57079, np.deg2rad(-45)])
+            else:
+                grasp_pose = self.cobot.FK(np.r_[0., 0., -1.57079, 0., 1.57079, 0])
             [grasp_pose.t[0], grasp_pose.t[1], grasp_pose.t[2]] = object_center.t
 
             release_pose = self.cobot.FK(self.cobot.q_calib)
@@ -94,86 +146,78 @@ class PneumaticFingerActionServer(SkillBase):
         else:
             # Not supported yet
             return
-
+        if goal.release_pose.pose.orientation.x == 0:
+            self.turn_maneuver = False
+        else:
+            self.turn_maneuver = True
         # Transform into tool tip space
         grasp_pose = self.base2tool(grasp_pose)
         release_pose = self.base2tool(release_pose)
-        #release_pose = self.cobot.FK(np.deg2rad(np.array([-77.1, 42.6, -84, 0, 57.3, 89.8])))
-
+        # release_pose = self.cobot.FK(np.deg2rad(np.array([-77.1, 42.6, -84, 0, 57.3, 89.8])))
 
         # Compute pre_poses (above the actual ones)
         pre_grasp_pose = grasp_pose @ sm.SE3([0, 0, -self.safety_distance])
-        pre_release_pose = release_pose @ sm.SE3([0, 0, -0.1])
+        pre_release_pose = release_pose @ sm.SE3([0, 0, -self.safety_distance])
 
         # Go to starting pose
-        self.cobot.move_to_joint_pose(self.cobot.q_calib)
+        self.cobot.move_to_joint_pose(self.cobot.q_calib, stochastic=True)
 
         # if not self.action_server_valid:
         #     return
         self.cobot.change_tool("vacuum")
         self.cobot.tool_controller.vacuum = True
-
+        if not self.action_server_valid:
+            return self.cancel(msg="pneumatic grasping pre-empted")
         # Should use task planner in the end
-        self.cobot.goTo(pre_grasp_pose, v_max=0.02)
+        rospy.loginfo("PneumaticFinger-Skill: Moving to pre_pose with planner")
+        
+        if self.turn_maneuver:
+            rospy.loginfo("PneumaticFinger-Skill: Initiating turn to feel battery")
+            self.cobot.tool_controller.vacuum = False #Closed
+            self.goTo_with_cancel(sm.SE3([0, -0.10, 0])@pre_grasp_pose, v_max=self.speed)
+            # Now move down
+            self.move_until_contact(sm.SE3([0, 0, -self.safety_distance - 0.05]) @ self.cobot.T_B_E_robot, self.f_contact)
+            # Now we touch the bottom, go up a bit
+            self.goTo_with_cancel(sm.SE3([0, 0, 0.005]) @ self.cobot.T_B_E_robot)            
 
-        # if not self.action_server_valid:
-        #     return
+            # Now go along y axis (neg. or pos. depening on what rotation direction was chosen before) until force is felt
+            rospy.loginfo(f"Trying to make contact with battery using threshold {0.15*self.f_contact}")
+            self.move_until_contact(sm.SE3([0, 0.035, 0]) @ self.cobot.T_B_E_robot, self.f_contact,v_max=0.008)
 
-        if self.force_sensitive:
-            # Move down until force is felt
-            self.cobot.move_to_pose(grasp_pose @ sm.SE3([0, 0, 0.02]), err_gain=None, v_max=0.01)
-            force_z = []
-            rospy.sleep(0.1)
-            T = int(100 * self.cobot.hz)
-            for t in range(T):
-                force_z.append(self.cobot.FT_F[2])  # Force in z direction
-                if self.cobot.state is None:
-                    rospy.loginfo(
-                        f"Finger Skill moved {100 * self.below_dist} cm below given position, found no object, something is wrong!")
-                    self.problemEncountered()
-                    return
-                elif self.cobot.state == "error":
-                    rospy.loginfo("Cobot in error state, aborting pneumatic finger skill.")
-                    self.problemEncountered()
-                    return
-                # if not self.action_server_valid:
-                #     return
-                if abs(np.mean(force_z) - force_z[-1]) > 1:
-                    break
-                self.cobot.update()
+            #Now we touch the battery, go up and adjust y properly
+            self.goTo_with_cancel(sm.SE3([0, 0, 0.05]) @ self.cobot.T_B_E_robot, v_max=self.speed)
+            self.goTo_with_cancel(sm.SE3([0, 0.094, 0])@ self.cobot.T_B_E_robot, v_max=self.speed)
+            
+            rospy.loginfo(f"PneumaticFinger-Skill: Moving down until contact, f_contact = {self.f_contact}N")
+            self.cobot.tool_controller.vacuum = True #Open and ready to grasp
+            self.move_until_contact(sm.SE3([0, 0, -self.safety_distance - 0.05])@ self.cobot.T_B_E_robot, 1.5*self.f_contact)
         else:
-            self.cobot.goTo(grasp_pose, v_max=0.01)
+            self.goTo_with_cancel(pre_grasp_pose, v_max=self.speed)
+            if self.force_sensitive:
+                # Move down until force is felt
+                rospy.loginfo(f"PneumaticFinger-Skill: Moving down until contact - 5cm below grasp pose, treshold f_contact = {self.f_contact}N")
+                self.move_until_contact(grasp_pose @ sm.SE3([0, 0, 0.05]), 1.5*self.f_contact)
+                self.goTo_with_cancel(sm.SE3([0, 0, 0.01]) @ self.cobot.T_B_E_robot)
+            else:
+                self.goTo_with_cancel(grasp_pose, v_max=0.01)
 
         # Close gripper
         self.cobot.tool_controller.vacuum = False
-
+        rospy.sleep(0.5)
+        
         # Backup 15 cm
-        self.cobot.goTo(self.cobot.T_B_E_robot @ sm.SE3([0, 0, -0.15]), v_max=0.03)
-        # Check if force is different. current force should be bigger since object is grasped
-        rospy.sleep(0.2)
-
-        # if self.cobot.FT_F[2] <= force_z[0] + 0.5:
-        #     # Current force is not much bigger, no object grasped
-        #     self.problemEncountered()
-        #     return
-
-        # if not self.action_server_valid:
-        #     return
+        self.goTo_with_cancel(self.cobot.T_B_E_robot @ sm.SE3([0, 0, -0.15]), v_max=self.speed)
 
         # Go to release pose
-        self.cobot.goTo(pre_release_pose, v_max=0.02)
-
-        # if not self.action_server_valid:
-        #     return
-        # Disable finger to drop the object
-
-        self.cobot.goTo(release_pose, v_max=0.02)
+        rospy.loginfo("PneumaticFinger-Skill: Going to pre_release_pose with planner")
+        #self.cobot.stochastic_move_to_pose(pre_release_pose)
+        self.goTo_with_cancel(pre_release_pose, v_max=self.speed)
+        rospy.loginfo("PneumaticFinger-Skill: Going to release pose and opening fingers")
+        self.goTo_with_cancel(release_pose, v_max=self.speed)
         self.cobot.tool_controller.vacuum = True
-        self.cobot.goTo(pre_release_pose, v_max=0.02)
-        # Go back to calibration pose
-        #curj = self.cobot.q_calib.copy()
-        #curj[0] = np.deg2rad(-110)
-        self.cobot.move_to_joint_pose(self.cobot.q_calib)
+        self.goTo_with_cancel(pre_release_pose, v_max=self.speed)
+        self.cobot.move_to_joint_pose(self.cobot.q_calib, stochastic = False)
+        self.cobot.change_tool("wsg_50")
         self._skill_result.result = SkillResult.FINISHED
         self.end_skill("Pneumatic finger done!")
 

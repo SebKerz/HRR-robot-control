@@ -32,6 +32,9 @@
 #include <hrr_controllers/core/sns_trk_api.h>
 
 
+//Transport Hints for TCP no delay
+#include <ros/transport_hints.h>
+
 namespace hrr_controllers {
 
     inline void clipVel(Eigen::Vector3d vel, const double &max_v) {

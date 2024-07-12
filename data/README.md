@@ -1,10 +1,30 @@
-# COMAU PDL workspace 
-This repository contains the PDL code used for COMAU ROS interface.
+# PC-setup and utilities
 
-Clone this repository in a windows PC that has ethernet connection with the robot controller.
-Translate all four pdl files into cod files and upload them on the C5G controller using the FTP server of the robot controller.
+Below, there is a short outline how to use your PC with the
+lab hardware at TUM-LSR (and maybe beyond).
 
-1. `pdl_tcp_functions` - NO HOLD PDL program with utility functions for the TCP/IP communication
-2. `state_server` - NO HOLD PDL program that contains a TCP server for publishing robot's state
-3. `motion_server` - NO HOLD PDL program that contains a TCP server for receiving motion commands
-4. `motion_handler` - HOLD PDL program that executes the motion commands
+
+## Set up Python environment
+
+This has been moved to a dedicated [wiki section->system-setup](https://hr_recycler.pages.gitlab.lrz.de/mini_wiki/system_setup.html)
+
+## ROS workspace setup
+
+The PC-setup and configuration is documented / sketched [wiki section->robot-startup](https://hr_recycler.pages.gitlab.lrz.de/mini_wiki/system_setup.html#prepare-system-environment)
+
+### zsh-default configurations
+
+the default configuration is given as
+### Using these scripts
+
+Having these scripts available, you should only need to run
+
+```bash
+hrr_rosify
+```
+
+and your system is set up to mess with the robots.
+
+## Start the robot 
+
+The explanation about the starting procedure of the robot is found in the [```wiki section->robot-startup->launch the hrr cobot ros driver```](https://hr_recycler.pages.gitlab.lrz.de/mini_wiki/robot_startup.html#launch-the-hrr-cobot-ros-driver)

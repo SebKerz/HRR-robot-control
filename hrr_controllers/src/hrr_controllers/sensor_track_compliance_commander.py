@@ -96,7 +96,7 @@ class SnsTrkComplCmd(BaseController):
         self._gain_client = dynamic_reconfigure.client.Client(gain_conf_topic_name,
                                                               timeout=10, config_callback=self.config_cb)
         self._full_cmd = rospy.Publisher(
-            cmd_topic_name, HybridForceVelocityCmdStamped, queue_size=10)
+            cmd_topic_name, HybridForceVelocityCmdStamped, queue_size=10, tcp_nodelay=True)
         self._S_cmd = rospy.Publisher(
             control_select_topic_name, HybridForceVelocityControlSelect, queue_size=10)
         if ft_ack_srv_name is not None:

@@ -639,31 +639,27 @@ class HrrCobotIf(hrr_common.RosBaseHandle):
         """
 
         def matlab_exec():
-            joint_traj = None
-            if self._planner_interface.has_matlab:
+            if self._planner_interface.has_matlab:    
                 joint_traj = self._planner_interface.get_joint_trajectory_to_joint_configuration(q_des)
-            if self._planner_interface.can_plan and joint_traj is None:
-                try:
-                    joint_traj = self._planner_interface.plan_joint_trajectory(q_des)
-                except (AttributeError, rospy.ServiceException):
-                    return
-            self.execute_joint_trajectory(joint_traj, wait_for_feedback=True, q_des=q_des)
+                self.execute_joint_trajectory(joint_traj=joint_traj, wait_for_feedback=True)
 
         def linear_joint_traj():
             self.execute_joint_trajectory(None, wait_for_feedback=True, q_des=q_des)
 
-        dq = np.linalg.norm((q_des - self.q)[:-1])
+        dq = np.linalg.norm((q_des - self.q))
         if dq <= 1e-5:
             rospy.logdebug(f"current configuration close to current ({dq * 1e3 :.2f} [milli-rad]). keep pose")
             return
         cur_controllers = self.active_controllers
         self.init_joint_trajectory_control()
-        if dq > 0.5 and stochastic:
-            matlab_exec()
-        # elif
-        # alternative motion planner
-        else:
-            linear_joint_traj()
+        if stochastic:
+            try:
+                rospy.loginfo("Trying to move with planner.")
+                matlab_exec()
+            except: 
+                rospy.logerr("Moving with linear joints! Planner died.")
+        rospy.loginfo("Moving linearly if planner didn't move. Take care!")
+        linear_joint_traj()
         rospy.logdebug("re-/deactivate controllers")
         self._joint_traj_handle.deactivate()
         self.reactivate_controllers(cur_controllers)
@@ -685,6 +681,16 @@ class HrrCobotIf(hrr_common.RosBaseHandle):
 
         #use default IK to get multiple possible q_des
         qs_des = self.IK(T_B_E_des)
+
+        lower_joint_limits = [-2.9, -1.1, -2.6, -3.4, -1.8, -3.14]
+        upper_joint_limits = [2.9, 1.9, 1, 3.4, 1.7, 3.14]
+
+        violating_indices = []
+        for k,elem in enumerate(qs_des):
+            if any((elem-lower_joint_limits)<=0) or any((elem-upper_joint_limits)>=0):
+                violating_indices.append(k)
+        qs_des = np.delete(qs_des, violating_indices, axis=0)
+
         #Get absolute distance to all q_des from current q
         qs_diff = [np.abs(elem-self.q) for elem in qs_des]
         #Find nearest q_des (sorted by joints)
@@ -720,8 +726,9 @@ class HrrCobotIf(hrr_common.RosBaseHandle):
             
         if self._planner_interface.has_matlab:    
             joint_traj = self._planner_interface.get_joint_trajectory_to_joint_configuration(q_des)
-            #If you want to use matlab IK:
-            #joint_traj = self._planner_interface.get_joint_trajectory_to_pose(T_B_E_des)
+            if len(joint_traj)==0:
+                rospy.loginfo("Could not find joint trajectory with planner that adheres to joint limits")
+                return
         self.execute_joint_trajectory(joint_traj=joint_traj, wait_for_feedback=True)
         rospy.loginfo("re-/deactivate controllers")
         self._joint_traj_handle.deactivate()
@@ -734,7 +741,7 @@ class HrrCobotIf(hrr_common.RosBaseHandle):
         except AttributeError:
             pass
         try:
-            self.FT.read_params()
+            #self.FT.read_params() # :(
             self._ft_handle.update_load(
                 quaternion.as_rotation_matrix(self.sns_quat.conjugate()) @ self.R_FT_E.T
             )
@@ -845,7 +852,7 @@ class HrrCobotIf(hrr_common.RosBaseHandle):
             tool_frame_name = f"{robot_urdf_prefix}screwdriver_tip"
         elif tool_type == ToolType.VACUUM_GRIPPER:
             rospy.logwarn_once("vacuum gripper contains two tips. This contradicts default pipeline atm. Use 1")
-            tool_frame_name = f"{robot_urdf_prefix}vacuum_tip_1"
+            tool_frame_name = f"{robot_urdf_prefix}vacuum_tip_2"
         if tool_name is None:
             tool_name = tool_type2str(tool_type)
         self.set_tool_from_ros_frame(name=tool_name, tool_frame_id=tool_frame_name)
@@ -878,6 +885,9 @@ class HrrCobotIf(hrr_common.RosBaseHandle):
         self.set_tool_frame(tool_type, robot_urdf_prefix=robot_urdf_prefix, tool_name=tool_name)
         rospy.sleep(2)
         self.update_ee_tcp_tf()
+        self.update()
+        self.FT.read_params()
+        self.update()
         return self.tool == tool_name
 
     def _check_for_tool_check(self) -> bool:

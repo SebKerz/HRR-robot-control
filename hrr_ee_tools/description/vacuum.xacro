@@ -48,7 +48,7 @@
     </joint>
 
     <joint name="${prefix}vacuum_body_tip_2" type="fixed">
-      <origin xyz="-0.003 -0.0525 0.08568" rpy="0 0 0"/>
+      <origin xyz="0 -0.0525 0.11568" rpy="0 0 0"/> <!---0.003 -0.0525 0.08568-->
       <parent link="${prefix}vacuum_body"/>
       <child link="${prefix}vacuum_tip_2"/>
     </joint>

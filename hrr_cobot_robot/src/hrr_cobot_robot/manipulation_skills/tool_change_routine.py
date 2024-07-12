@@ -31,9 +31,13 @@ class ToolChangeActionServer(SkillBase):
     def __init__(self):
         super(ToolChangeActionServer, self).__init__(name="tool_changer")
         self.v = np.r_[0.01, 0.02, 0.03, 0.035, 0.04]
+        self.calib_pose = np.r_[1.34109, 0.09328, -1.44435, -0.01627, 0.67686, -0.00009]
         self.tool_change_poses_path = pathlib.Path(__file__).parent.parent.parent.parent / "data" / "tool_changer"
         assert self.tool_change_poses_path.exists(), f"unknown path {self.tool_change_poses_path}"
         self.starting_pose = None
+        self.stop_it = False
+        self.speed_fast = 0.08
+        self.speed_slow = 0.005
 
     def init_ros(self, action_srv_name="/hrr_cobot/change_tool"):
         """
@@ -65,15 +69,15 @@ class ToolChangeActionServer(SkillBase):
         if tool_id == ToolType.NONE:
             return None
         elif tool_id == ToolType.WSG_50:
-            filename = self.tool_change_poses_path / "pgrip_4.npy"
+            filename = self.tool_change_poses_path / "pgrip_4_final.npy"
         elif tool_id == ToolType.WSG_50_DSA:
-            filename = self.tool_change_poses_path / "wsg_3_hardcode.npy"
+            filename = self.tool_change_poses_path / "wsg_3_final.npy"
         elif tool_id == ToolType.SHAFT_GRINDER:
-            filename = self.tool_change_poses_path / "shaftgrinder_1.npy"
+            filename = self.tool_change_poses_path / "shaftgrinder_5_final.npy"
         elif tool_id == ToolType.SCREW_DRIVER:
-            filename = self.tool_change_poses_path / "screw_6.npy"
+            filename = self.tool_change_poses_path / "screwdriver_6_final.npy"
         elif tool_id == ToolType.VACUUM_GRIPPER:
-            filename = self.tool_change_poses_path / "vacuum_2_hardcode.npy"
+            filename = self.tool_change_poses_path / "vacuum_2_final.npy"
         else:
             return None
         if filename.exists():
@@ -88,35 +92,74 @@ class ToolChangeActionServer(SkillBase):
                 f"for poses is wrong. See get_poses_filename.")
             return None
 
-    def move_to_starting_pose(self):
-        self.cobot.move_to_joint_pose(self.starting_pose)
+    # def move_to_starting_pose(self):
+    #     self.cobot.move_to_joint_pose(self.starting_pose)
 
+    def goTo_with_cancel(self, pose, v_max=0.04):
+    # Like goTo but checks if action server was cancelled or timeout reached.
+        if not self.stop_it:
+            self.cobot.move_to_pose(pose, v_max=v_max)
+            for t in range(int(100 * self.cobot.hz)):
+                if not self.action_server_valid:
+                    self.cancel(msg="vaccum grasping pre-empted")
+                    self.stop_it = True
+                    break
+                elif self.cobot.state is None:
+                    return True
+                elif self.cobot.state == "error":
+                    return self.end_skill(msg="Vacuum grasping failed. Cobot in state 'error'.")
+                else:
+                    self.cobot.update()
+                    
     def pickup_routine(self, poses, new_tool_str):
         """
         Picking up a new tool from the rack. There are no safety checks here, these happen in execute_skill_cb.
         """
         cobot = self._get_cobot(None)
-
+        cobot.F_max = 120
+        if np.rad2deg(cobot.q[0])<50:
+            if not self.stop_it:
+                self.cobot.move_to_joint_pose(self.calib_pose, stochastic=True)
         for i in range(len(poses["poses_A"])):
+            if not self.action_server_valid:
+                rospy.loginfo("Action server no longer valid, aborting")
+                self.stop_it = True
+                break
             if poses["close_tc"][i]:
-                cobot.goTo(poses["poses_A"][i], v_max=0.01, check_reachable=False)
+                cobot.open_tool_changer()
+                self.goTo_with_cancel(poses["poses_A"][i], v_max=self.speed_slow)
                 rospy.loginfo(f"[tool_change_routine] reached pos {i} for pickup of {new_tool_str}.")
-                self.publish_feedback(current_action=f"Reached pos {i}")
                 rospy.loginfo(f"[tool_change_routine] Closing tool changer to pick up {new_tool_str}.")
                 # Close Tool changer & Change tool id to new tool
-                cobot.close_tool_changer(force=True)
-                cobot.change_tool(new_tool_str)
+                if not self.stop_it and self.action_server_valid:
+                    cobot.close_tool_changer(force=True)
+                    rospy.loginfo(f"Successfully changed tool to {new_tool_str}.")
                 self.publish_feedback(current_action="Closed tool changer.")
-                rospy.sleep(0.2)
+                rospy.sleep(1.0)
             else:
                 if poses["use_joint_ctrl"][i]:
-                    cobot.move_to_joint_pose(poses["poses_q"][i])
+                    if not self.stop_it:
+                        cobot.move_to_joint_pose(poses["poses_q"][i], stochastic=False)
                 else:
-                    cobot.goTo(poses["poses_A"][i], v_max=0.02, check_reachable=False)
+                    self.goTo_with_cancel(poses["poses_A"][i], v_max=self.speed_fast)
                 rospy.loginfo(f"[tool_change_routine] reached pos {i} for pickup of {new_tool_str}.")
                 self.publish_feedback(current_action=f"Reached pos {i}")
-
-
+        if not self.stop_it and self.action_server_valid:
+            cobot.move_to_joint_pose(self.calib_pose, stochastic=False)
+        cobot.F_max = 80
+        rospy.loginfo("Changing tool parameter now!")
+        cobot.change_tool(new_tool_str)
+        rospy.loginfo(f"This is the tool string {new_tool_str}")
+        # if new_tool_str == "wsg_50_dsa":
+        #     rospy.loginfo("Trying to home wsg 50 dsa again!")
+        #     # cobot.change_tool("nothing")
+        #     # rospy.sleep(3)
+        #     # cobot.change_tool("wsg_50_dsa")
+        #     rospy.sleep(3)
+        #     cobot.gripper.reset()
+        #     rospy.sleep(0.5)
+        #     cobot.gripper.send_pos(0.07, si=True)
+        
     def dispose_routine(self, poses):
         """
         Putting a tool into the rack. There are no safety checks here, these happen in execute_skill_cb.
@@ -128,26 +171,33 @@ class ToolChangeActionServer(SkillBase):
         # if self.starting_pose is not None:
         #     assert self.starting_pose.shape == (len(cobot.q),)
         #     self.cobot.move_to_joint_pose(self.starting_pose
+        if not self.stop_it:
+            cobot.move_to_joint_pose(self.calib_pose, stochastic=True)
 
         for i in range(len(poses["poses_A"])):
+            if not self.action_server_valid:
+                rospy.loginfo("Action server no longer valid, aborting")
+                self.stop_it = True
+                break
             if poses["open_tc"][i]:
                 # Close Tool changer & Change tool id to new tool
-                cobot.goTo(poses["poses_A"][i], v_max=0.01,check_reachable=False)
-                self.publish_feedback(current_action=f"Reached pos {i}")
-                rospy.sleep(0.1)
-                cobot.open_tool_changer()
-                rospy.loginfo(f"[tool_change_routine] Opening tool changer to dispose.")
-                cobot.change_tool("nothing")
-                self.publish_feedback(current_action="Opened tool changer.")
+                self.goTo_with_cancel(poses["poses_A"][i], v_max=self.speed_slow)
+                if (not self.stop_it) and self.action_server_valid:
+                    cobot.open_tool_changer()
+                    rospy.sleep(1.0)
+                    rospy.loginfo(f"[tool_change_routine] Opening tool changer to dispose.")
+                    cobot.change_tool("nothing")
+                    rospy.loginfo("Opened tool changer.")
             else:
                 if poses["use_joint_ctrl"][i]:
-                    cobot.move_to_joint_pose(poses["poses_q"][i])
+                    if not self.stop_it:
+                        cobot.move_to_joint_pose(poses["poses_q"][i], stochastic=False)
                 else:
-                    cobot.goTo(poses["poses_A"][i], v_max=0.03, check_reachable=False)
+                    self.goTo_with_cancel(poses["poses_A"][i], v_max=self.speed_fast)
                 rospy.loginfo(f"[tool_change_routine] reached pos {i} for disposal.")
                 self.publish_feedback(current_action=f"Reached pos {i}")
-
-
+        #cobot.move_to_joint_pose(self.calib_pose, stochastic=False)
+        
     def execute_skill_cb(self, goal: ChangeToolGoal):
         """
         Actual Skill Execution as an action-service
@@ -162,49 +212,54 @@ class ToolChangeActionServer(SkillBase):
 
         """
         cobot = self._get_cobot(None)
-
         new_tool_str = tool_type2str(goal.new_tool.type)
-        self.publish_feedback(current_action=f"change tool from {cobot.tool}) to {new_tool_str}).")
-        
+        self.publish_feedback(current_action=f"change tool from {cobot.tool} to {new_tool_str}.")
+        rospy.loginfo(f"change tool from {cobot.tool} to {new_tool_str}.")
         if goal.new_tool.type == cobot.tool_id:
             return self.end_skill(
                 msg=f"Current tool ({cobot.tool}) is equal to new tool ({new_tool_str}).",
                 save_data=False)
 
-        #self.move_to_starting_pose()
+        # self.move_to_starting_pose()
 
         if cobot.tool_id != ToolType.NONE:
-            if False:#cobot.tool_changer_open:
+            if False:  # cobot.tool_changer_open:
                 rospy.logwarn(
                     f"[tool_change_routine] cobot tool id says {cobot.tool} attached, "
                     "but tool changer is open. I will set tool_id to None.")
                 cobot.tool_id = ToolType.NONE
-                #This might be a safety issue: If the tool changer died/is unplugged,
-                #the digital pin might indicate that the tool changer is open, even though it is closed. Better to abort?
+                # This might be a safety issue: If the tool changer died/is unplugged,
+                # the digital pin might indicate that the tool changer is open, even though it is closed. Better to abort?
             else:
                 rospy.loginfo(f"cobot tool id says {cobot.tool} is attached, trying to dispose.")
                 routine = self.load_routine_dict(cobot.tool_id)
+                if not self.action_server_valid:
+                    return self.cancel(msg="vaccum grasping pre-empted")
                 if routine is not None:
+                    if not self.action_server_valid:
+                        return self.cancel(msg="vaccum grasping pre-empted")
                     self.dispose_routine(routine["dispose"])
                 else:
-                    #Better to abort if invalid tool id requested
+                    # Better to abort if invalid tool id requested
                     return
 
-        #Change these assert ... boys to if ... abort?
-        assert cobot.tool_id == ToolType.NONE, f"current tool is {cobot.tool}. Something went wrong during disposal"  
+        # Change these assert ... boys to if ... abort?
+        assert cobot.tool_id == ToolType.NONE, f"current tool is {cobot.tool}. Something went wrong during disposal"
         #assert cobot.tool_changer_open, f"tool-changer is closed, something seems messed up. Exciting!"
 
         if goal.new_tool.type == ToolType.NONE:
             rospy.loginfo(f"[tool_change_routine] Successfully disposed tool. No new tool wanted. Done.")
             return self.end_skill(msg="Successfully disposed tool.")
-        
+
         self.publish_feedback(current_action=f"pick up {new_tool_str}")
-        rospy.logdebug(f"No tool attached, trying to get {new_tool_str}.")
+        rospy.loginfo(f"No tool attached, trying to get {new_tool_str}.")
         routine = self.load_routine_dict(goal.new_tool.type)
-        assert routine is not None, f"no route found to pick up  {tool_type2str(goal.new_tool.type)}." #Better to abort
+        assert routine is not None, f"no route found to pick up  {tool_type2str(goal.new_tool.type)}."  # Better to abort
+        if not self.action_server_valid:
+            return self.cancel(msg="tool change pre-empted")
         self.pickup_routine(routine["pickup"], new_tool_str)
-        rospy.loginfo(f"Successfully changed tool to {tool_type2str(goal.new_tool.type)}.")
-        
+        if not self.action_server_valid:
+            return self.cancel(msg="tool change pre-empted")
         return self.end_skill(msg="Tool change routine done.")
 
     @property

@@ -123,7 +123,7 @@ tool_change_routine:
 # levering_action_srv_name: /hrr_cobot/skills/levering
 
 # Motion Planner topic / service names
-matlab_working_dir: /home/hrr_cobot/_ros/hr_recycler_ws/src/planner/src
+matlab_working_dir: /home/hrr_cobot/_ros/hr_recycler_ws/src/planner/src #change hrr_cobot to schrottgott for ecoreset
 device_pose_topic_name: device_pose
 device_type_topic_name: device_type
 # the parameters below can be commented if the interfaces are available as is
@@ -134,14 +134,14 @@ device_type_topic_name: device_type
 #call_cartesian_trajectory_planner_service: /hrr_cobot/motion_planner/plan_trajectory_to_pose
 sensitive_grasping:
   f_contact: 2.0    # force in N to detect an environment impact
-  hover_distance: 0.1 # distance to hover robot above goal pose in m
+  hover_distance: 0.05 # distance to hover robot above goal pose in m
   grasping_strategies: [1,  0, 0,  0,  0,  1]  # grasping strategy selector. In case no casadi / MPC interface is available, replace 1 by -1 (force-based)
-  scale_vel: 0.1 # velocity scaling for downward motion
+  scale_vel: 0.2 # velocity scaling for downward motion
   max_tilt: 0.7  # maximum tilting angle
   closing_speed: 0.01  # closing speed in m/s (max is 0.44)
   closing_width: 0.02 # closing width in m
   opening_width: 0.06 # opening width in m
-  rotation_steps: 150  # number of steps for a rotation for removing the lightbulbs
+  rotation_steps: 200  # number of steps for a rotation for removing the lightbulbs
   tcp_link_name: *wsg_tcp_link  # name of default WSG TCP frame
   dsa_link_name: *wsg_dsa_link   # published TCP frame used for rotation
 

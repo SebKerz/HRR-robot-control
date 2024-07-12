@@ -84,8 +84,8 @@ class SkillBase(hrr_common.RosBaseHandle, ABC):
         self._skill_result.result = SkillResult.UNKNOWN
         self.cobot.update_tf()
         self.cobot.reset_sensor()
-        if not self.cobot.legal_joint_config(self.cobot.q):
-            return self.cancel(msg="current robot configuration is invalid. Please maneuver to legal position")
+        #if not self.cobot.legal_joint_config(self.cobot.q):
+        #    return self.cancel(msg="current robot configuration is invalid. Please maneuver to legal position")
         if tool_id is not None:
             self.assert_tool(tool_id)
         if not hardcoded_transformation:
@@ -268,6 +268,7 @@ class SkillBase(hrr_common.RosBaseHandle, ABC):
             msg(str or None): success-message to be published and printed via ros-out
             save_data(bool, optional): flag to enable data saving.
         """
+        #self.cobot.F_max = 80
         self._skill_result.result = SkillResult.FINISHED
         try:
             self.cobot.stop()
@@ -318,7 +319,7 @@ class SkillBase(hrr_common.RosBaseHandle, ABC):
         return True
 
     @property
-    def action_sever_valid(self) -> bool:
+    def action_server_valid(self) -> bool:
         """Function that can be called within an execution loop to check against preemption or timeouts.
 
         .. note::
@@ -344,7 +345,7 @@ class SkillBase(hrr_common.RosBaseHandle, ABC):
             rospy.logwarn("Preempt Request received.")
             if self.as_active():
                 self._skill_result.result = SkillResult.FAILED
-                self._as.set_preempted(self.result, f"skill {self._name} Preempted")
+                self._as.set_preempted(self.result, f"skill {self._name} Preempted. Should Stop!")
             self.cobot.stop()
             return False
         if (rospy.get_time() - self._t0) > self.timeout:

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 HRR Cobot Control
 -------------------
@@ -30,6 +31,8 @@ from hrr_cobot_robot.hrr_cobot_handle import HrrCobotIf
 from hrr_controllers.sensor_handles import free_space_offset_regression
 # hrr-cobot imports
 from hrr_controllers.utils import ForceControlHandle, VelocityControlHandle, matrix_parser
+from comau_msgs.srv import SetIO, SetIORequest
+
 
 __all__ = ["HrrCobotControl", "JointLimitException", "JointLimitWarning", "UnreachableException"]
 
@@ -74,10 +77,10 @@ class HrrCobotControl(HrrCobotIf):
         self.err_gain = 1.0
         self.ctrl_frame = self.base_link
         self.compensate_joint_limits = False
-        self.F_max = 80.0
+        self.F_max = 180
         self._T_des = None
         self._state = None
-        self._rate = rospy.Rate(45)
+        self._rate = rospy.Rate(100)
         self._pub_state = None
         self._pub_rpm = None
         self._F_ctrl = ForceControlHandle()
@@ -165,6 +168,11 @@ class HrrCobotControl(HrrCobotIf):
 
     def emergency_stop(self):
         """Puts robot to halt, and raises an error-state to be noticeable via the :py:meth:`~state` property"""
+        srv = rospy.ServiceProxy("/hrr_cobot/set_digital_io", SetIO)
+        srv(SetIORequest(pin=11, state=False))
+        rospy.sleep(0.2)
+        srv(SetIORequest(pin=12, state=False))
+        srv(SetIORequest(pin=13, state=False))
         self.stop()
         self._reset_set_values()
         self._state = "FAILURE"
@@ -213,11 +221,12 @@ class HrrCobotControl(HrrCobotIf):
                 f"cannot alter current cobot-state {self.state} to {value}")
 
     def safety_check(self) -> bool:
-        if np.linalg.norm(self.B_F_msr) >= self.F_max:
+        if np.linalg.norm(self.B_F_msr) >= 140:
             rospy.logerr_throttle(0.2,
-                                  f"Force threshold exceeded: |F|={np.linalg.norm(self.B_F_msr):.2f} > {self.F_max:.2f}. Stop motion")
-            self.emergency_stop()
-            return False
+                                  f"Force threshold exceeded: |F|={np.linalg.norm(self.B_F_msr):.2f} > 140. Stop motion?")
+            rospy.logerr_throttle(0.2,f"Raw force {self.FT_F}")
+        if np.linalg.norm(self.FT_F) == 0:
+            rospy.logerr_throttle(0.2,f"Force is zero. No F/T sensor connected? Stop motion?")
         return True
 
     def _cartesian_servo_command(self):
@@ -422,6 +431,9 @@ class HrrCobotControl(HrrCobotIf):
             elif self.state == self._JOINT_CTRL:
                 self._joint_ctrl_command()
         if sleep:
+            #rospy.logerr(self._rate.remaining())
+            # if self._rate.remaining() < rospy.Duration.from_sec(0):
+            #     rospy.logerr(f"Update command found loop rate violation! We're lagging behind {1e-6*self._rate.remaining()}ms to keep frequency!")
             self.sleep()
 
     # use move_to_joint_pose(q_des, stochastic=True)

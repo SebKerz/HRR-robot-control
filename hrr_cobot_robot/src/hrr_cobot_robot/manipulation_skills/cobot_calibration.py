@@ -129,9 +129,9 @@ class CalibrationServer(SkillBase):
 
         def dead():
             # helper function to check for cancel / error
-            return any([not self.action_sever_valid, not self.empty_error_message(err)])
+            return any([not self.action_server_valid, not self.empty_error_message(err)])
 
-        self._q_calib_offset = [np.deg2rad(121), 0, 0, 0, -0.5, 0] # [0, 0, 0, 0, -0.5, 0]
+        self._q_calib_offset = [0, 0, 0, 0, -0.5, 0] #[np.deg2rad(121), 0, 0, 0, -0.5, 0]
         self.pre_skill_execution()
         err = ""
         if self.cobot.R_FT_E is None:
@@ -155,15 +155,15 @@ class CalibrationServer(SkillBase):
         self.publish_feedback(f"start calibration")
         # move to calibration pose
         self.observer.reset()
-        if self.action_sever_valid:
+        if self.action_server_valid:
             self.publish_feedback("move to calibration pose")
         if not goal.keep_current_pose:
 
-            q_des = self.cobot.q_calib + self._q_calib_offset
-            # q_des = np.r_[-1.29851,  0.00112, -1.87362,  0.00495, -0.30392,  1.56607]
+            q_des = self.cobot.q_calib + np.r_[ 1.34109,  0, 0, 0,  0, 0]#self._q_calib_offset
+            #q_des = np.r_[ 1.34109,  0.09328, -1.44435, -0.01627,  0.67686, 0]
             if not self.cobot.legal_joint_config(q_des):
                 return self.cancel(msg=f"calibration joint-configuration {q_des} is invalid")
-            self.cobot.move_to_joint_pose(q_des)
+            self.cobot.move_to_joint_pose(q_des, stochastic=False)
             if np.linalg.norm(pose_error(self.cobot.FK(q_des), self.cobot.T_B_E_robot)) > 1e-2:
                 err += "cannot run calibration -> robot not in calibration pose"
         if dead():

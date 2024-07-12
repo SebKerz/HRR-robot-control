@@ -380,15 +380,15 @@ namespace hrr_controllers {
         ROS_DEBUG("[%s] set dt:=%.3f", m_log_name.c_str(), m_dt);
         m_debug = pars.debug;
         m_ros_subs.push_back(nh.subscribe(pars.wrench_cur_topic_name, 1,
-                                          &CompliantController::wrenchReadCb, this));
+                                          &CompliantController::wrenchReadCb, this, ros::TransportHints().tcpNoDelay()));
         m_ros_subs.push_back(nh.subscribe(pars.wrench_cmd_topic_name, 1,
-                                          &CompliantController::wrenchCmdCb, this));
+                                          &CompliantController::wrenchCmdCb, this, ros::TransportHints().tcpNoDelay()));
         m_ros_subs.push_back(nh.subscribe(pars.cmd_topic_name, 1,
-                                          &CompliantController::twistCmdCb, this));
+                                          &CompliantController::twistCmdCb, this, ros::TransportHints().tcpNoDelay()));
         m_ros_subs.push_back(nh.subscribe(pars.control_select_topic_name, 1,
-                                          &CompliantController::controlSelectCb, this));
+                                          &CompliantController::controlSelectCb, this, ros::TransportHints().tcpNoDelay()));
         m_ros_subs.push_back(nh.subscribe(pars.full_cmd_topic_name, 1,
-                                          &CompliantController::fullCmdCb, this));
+                                          &CompliantController::fullCmdCb, this, ros::TransportHints().tcpNoDelay()));
         m_ros_srvs.push_back(nh.advertiseService(pars.set_calibrated_srv_name,
                                                  &CompliantController::setCalibratedFlagSrv, this));
         m_dyn_rcf_cb = boost::bind(&CompliantController::setGainsCb, this, _1, _2);

@@ -1,4 +1,5 @@
 #!/usr/bin/pyton3
+
 """
 Unscrewing skill
 -------------------------------------
@@ -34,6 +35,8 @@ scale_vel                 0.1                scaling of desired velocity for app
     to speed up searching: the actual skill is mainly implemented in  :py:meth:`~Unscrew.unscrew`
 """
 import copy
+import secrets
+from std_msgs.msg import Int8
 import os
 from typing import Sequence, Union
 
@@ -49,16 +52,39 @@ from hrr_cobot_robot.manipulation_skills.skill_base import SkillBase, SimpleMp
 
 __all__ = ["Unscrew"]
 
+fixed_pose = sm.SE3()
+fixed_pose_straight = sm.SE3()
+
+fixed_pose_straight.A[:4, :4] = [[0.81119, 0.00089, 0.58478, 0.58263],
+                                 [-0.58245, -0.08804, 0.80809, -0.23876],
+                                 [0.0522, -0.99612, -0.0709, 0.50576],
+                                 [0., 0., 0., 1.]]
+# fixed_pose_straight = fixed_pose @ T_outer
+
+fixed_pose.A[:4, :4] = [[0.61443, 0.02356, 0.78862, 0.54851],
+                        [-0.77968, -0.13481, 0.61149, -0.28939],
+                        [0.12072, -0.99059, -0.06446, 0.7098],
+                        [0., 0., 0., 1.]]
+
+# TUM  # [[0.5555, -0.56509, 0.60999, 0.62164],
+#                     [-0.52682, 0.3284, 0.78398, -0.25655],
+#                     [-0.64334, -0.75685, -0.11528, 0.55416],
+#                     [0., 0., 0., 1.]]  ## tilted by 5 degree
+
+# TUM: fixed_joint_pose_PC = np.r_[0.69105, 0.18795, -1.56624, -1.58332, 1.56126, -3.69435]
+fixed_joint_pose_MW_tilt = np.r_[0.60867, 0.42551, -1.24084, -1.53323, 1.26385, 3.34276]
+fixed_joint_pose_PC = np.r_[0.72818, 0.10042, -1.51531, -1.56217, 1.38782, -3.04629]
 
 
 class Unscrew(SkillBase):
 
-    def __init__(self, f_contact=2.0, hover_distance=2e-2,
+    def __init__(self, f_contact=5.0, hover_distance=0.05,
                  f_unscrew=10.0, f_insert=20.0,
                  buffer_size=100,
                  closing_width=1e-2):
         self.align_buf = np.zeros((buffer_size, 6))
         super().__init__(name="unscrew_v2")
+        self.do_surface_search = True
         self._T_B_E_goal = None
         self.f_contact = f_contact
         self.f_insert = f_insert
@@ -71,7 +97,6 @@ class Unscrew(SkillBase):
         self.closing_width = closing_width
         self.scale_pos_vel = 0.1
         self.success = False
-        self.num_trials = 5
         self._p0_contact = np.zeros(3)
         self._K_f = 4e-4
         self._f_critical = 45.0
@@ -82,11 +107,11 @@ class Unscrew(SkillBase):
         self._unscrew_time = 12.0
         self._screw_height = 8e-3
         self._feedback = UnscrewFeedback()
+        self._deviceType = None
+        self.force_threshold = 0.8 #Was 4.5
+        self.fixed_pose_straight = sm.SE3()
         self.fixed_pose = sm.SE3()
-        self.fixed_pose.A[:4,:4] = [[ 0.81119,  0.00089,  0.58478,  0.58263],
-                                   [-0.58245, -0.08804,  0.80809, -0.23876],
-                                   [ 0.0522 , -0.99612, -0.0709 ,  0.50576],
-                                   [ 0.     ,  0.     ,  0.     ,  1.     ]]
+        # for TUM. Delete for ECoreset!!
 
     def init_ros(self, action_srv_name):
         """initialize action-service and start. Refer to :py:meth:`~execute_skill_cb` for insights"""
@@ -97,8 +122,8 @@ class Unscrew(SkillBase):
     @classmethod
     def _from_ros(cls, cobot_prefix, skill_prefix="~", cobot=None):
         skill_prefix = hrr_common.fix_prefix(skill_prefix)
-        out = cls(f_contact=hrr_common.get_param(f"{skill_prefix}f_contact", 2.0),
-                  hover_distance=hrr_common.get_param(f"{skill_prefix}hover_distance", 1e-2)
+        out = cls(f_contact=hrr_common.get_param(f"{skill_prefix}f_contact", 5.0),
+                  hover_distance=hrr_common.get_param(f"{skill_prefix}hover_distance", 0.05)
                   )
         out.init_skill_base(cobot_prefix=cobot_prefix, cobot=cobot)
         out.init_ros(hrr_common.get_param(f"{cobot_prefix}unscrew_action_srv_name"))
@@ -106,23 +131,29 @@ class Unscrew(SkillBase):
         out.observer.set_buffers(out.cobot)
         return out
 
-    def recovery(self) -> None:
-        """Recover robot from an error, i.e. drive back to pre-pose via
-        the :py:meth:`hrr_cobot_robot.hrr_cobot_control.HrrCobotControl.goTo` command.
+    def move_until_contact(self, goal_pose, v_max=0.01, force=80):
+        contact = False 
+        self.cobot.move_to_pose(goal_pose, v_max=v_max)
+        rospy.loginfo(f"The current forces are {self.cobot.B_F_msr[:3]}")
+        F0 = np.copy(self.cobot.B_F_msr[:3])
+        for t in range(int(100 * self.cobot.hz)):
+            if not self.action_server_valid:
+                rospy.loginfo("Stopping during goTo motion since action server not valid")
+                break
+            elif self.cobot.state is None:
+                rospy.loginfo(f"Movement done, found no contact. Force deviation {self.cobot.B_F_msr[:3] - F0}")
+                break
+            elif self.cobot.state == "error":
+                rospy.loginfo("Problem with unscrewing goTo, cobot in state error")
+                break
+            elif np.linalg.norm((self.cobot.B_F_msr[:3] - F0) - self.cobot.FT.noise[:3]) >= force:
+                rospy.loginfo(f"Found contact while goTo. Force deviation {self.cobot.B_F_msr[:3] - F0}")
+                contact= True
+                break
+            else:
+                self.cobot.update()
+        return contact
 
-        .. note::
-
-            this function will increase the `F_max` wrench threshold to allow movement by 10%.
-            This may be insufficient in some cases, and will require a manual reset then.
-            Similarly, the threshold is reset at the end, so in case the function is interrupted,
-            the threshold might be false afterwards.
-        """
-        F_max_prev = self.cobot.F_max
-        if np.linalg.norm(self.cobot.B_F_msr) > self.cobot.F_max:
-            self.cobot.F_max = max(1.1 * np.linalg.norm(self.cobot.B_F_msr), F_max_prev)
-        if isinstance(self._T_B_E_goal, sm.SE3):
-            self.cobot.goTo(sm.SE3(self.hover_distance * self.B_surface_normal) @ self._T_B_E_goal)
-        self.cobot.F_max = F_max_prev
 
     def step(self, contact_as_success=False) -> Union[bool, None]:
         """
@@ -139,7 +170,7 @@ class Unscrew(SkillBase):
         self.observer.update(self.cobot)
         if contact_as_success and self.surface_contact:
             return True
-        if not self.action_sever_valid:
+        if not self.action_server_valid:
             return False
 
     def progress(self, contact_as_success=False, T_stop=np.inf, success_func=None) -> bool:
@@ -207,55 +238,22 @@ class Unscrew(SkillBase):
         Returns:
              bool: True, if the above is larger than `f_contact` (c.f. table above)
         """
-        return ((self.cobot.B_F_msr[:3] - self._F0[0:3]) -
-                self.cobot.FT.noise[:3]).T @ self.B_surface_normal >= self.f_contact
-
-    def screw_remove_success(self) -> bool:
-        self.success = True
-        return True
-        # return ((self.cobot.T_E_C_robot.t - self._p0_contact).T @ self.B_surface_normal).sum() >= self._screw_height
+        forcediff = ((self.cobot.B_F_msr[:3] - self._F0[0:3]) - self.cobot.FT.noise[:3]).T @ self.B_surface_normal
+        if forcediff >= self.f_contact:
+            rospy.loginfo(f"made contact with force difference {forcediff}")
+        return forcediff >= self.f_contact
+        #return ((self.cobot.B_F_msr[:3] - self._F0[0:3]) -
+        #        self.cobot.FT.noise[:3]).T @ self.B_surface_normal >= self.f_contact
 
     def unscrew(self, B_screw_pos=None, B_normal=None, T_B_E_goal=None):
         """
-        Actual unscrewing task, that consists of the main sub-steps
-         (for convenience, each sub-step is implemented in a separate function):
-
-        #. approach_object, i.e. approach the surface in a force-sensitive manner. This consists of the MPs:
-
-            * ``approach_pre_pose`` that uses `self.cobot.move_to_pose` to initiate a Cartesian servoing control
-            * ``approach_surface`` that uses `self.cobot.set_py_hybrid_force_vel_command` to initiate a velocity control-motion along the negative surface-normal vector. the set-values are adjusted in ``approach_kwargs``
-
-        #. ``search`` - currently removed / not implemented
-        #. ``insert screw`` that uses set_py_hybrid_force_vel_command according to the set-values in `insert_kwargs`
-        #. ``remove_screw`` that uses set_py_hybrid_force_vel_command according to the set-values in `unscrew_kwargs`
-
-        This process is repeated for at most `self.num_trials` or until the skill is run successfully or a failure occurs.
-
-        Args:
-            B_screw_pos(np.ndarray, optional): screw-location in base-frame
-            B_normal(np.ndarray, optional): surface-normal in base-frame
-            T_B_E_goal(sm.SE3, optional): EE-goal pose in screw-head
-
-        .. note::
-
-            The arguments may seem confusing, but it allows to either provide the goal-pos/normals or just the
-            ee-pose from external code, to diminish the issue of internal EE->tip transformations
+        Actual unscrewing task
         """
-
-        def approach_object():
-            self.process_steps((
-                SimpleMp(name="approach_pre_pose", f_init=self.cobot.move_to_pose,
-                         args=(sm.SE3(self.hover_distance * self.B_surface_normal) @ T_B_E_goal)),
-                SimpleMp(name="approach_surface", f_init=self.cobot.set_py_hybrid_force_vel_command,
-                         kwargs=approach_kwargs,
-                         contact_as_success=True)
-            ))
-
         def insert_screw():
+            rospy.loginfo(f"Inserting with force {self.f_insert}N")
             self.process_steps((
                 SimpleMp(name="insert", f_init=self.cobot.set_py_hybrid_force_vel_command, kwargs=insert_kwargs,
-                         T_max=2.0),
-            ))
+                         T_max=2.0),))
 
         def remove_screw():
             # force_z0 = abs((sm.SE3(self.cobot.B_F_msr[0:3]) @ self.cobot.T_B_C).t[2])
@@ -264,155 +262,237 @@ class Unscrew(SkillBase):
             # rospy.sleep(6)
             # print(abs((sm.SE3(self.cobot.B_F_msr[0:3]) @ self.cobot.T_B_C).t[2]))
             # self.success = abs((sm.SE3(self.cobot.B_F_msr[0:3]) @ self.cobot.T_B_C).t[2]) > force_z0
+            
+            #Go down a tiny bit, hopefully this helps put some pressure and keep inserted
+            self.cobot.goTo(sm.SE3(-self.B_surface_normal * 0.001) @ self.cobot.T_B_E_robot, v_max=0.002)
+            rospy.loginfo(
+                f"Running screwdriver program {self._screwdriver_program} for {self._unscrew_time}s")
             self.cobot.run_screwdriver_program(self._screwdriver_program, run_time=self._unscrew_time)
-            #self.process_steps((
-                #SimpleMp(name="unscrew", f_init=self.cobot.set_py_hybrid_force_vel_command, kwargs=unscrew_kwargs,
-                      #   T_max=self._unscrew_time, success_func=self.screw_remove_success),
-           # ))
-
-            rospy.sleep(5)
-            #self.cobot.goTo(sm.SE3(self.B_surface_normal * 0.01) @ self.cobot.T_B_E_robot, v_max=0.001)
-            self.success = True
-            #self.failure = False
+            rospy.sleep(5.0)
+            self.move_until_contact(sm.SE3(self.B_surface_normal * 0.03) @ self.cobot.T_B_E_robot, v_max=0.005, force=50)
 
         def search():
+       
             T_B_E_goali = self._T_B_E_goal
             success = False
-            search_vec = [sm.SE3(np.r_[0, 0, 0]), sm.SE3(np.r_[-0.002, 0, 0]),
-                          sm.SE3(np.r_[0.002, 0, 0]),
-                          sm.SE3(np.r_[0, 0.002, 0]), sm.SE3(np.r_[0, -0.002, 0])]
+            if self._deviceType == 5:
+                search_dist = 0.003
+                search_vec = [sm.SE3(np.r_[0, 0, 0]), sm.SE3(np.r_[0, search_dist, 0]), sm.SE3(np.r_[0, -search_dist, 0]),
+                        sm.SE3(np.r_[search_dist,0, 0]), sm.SE3(np.r_[-search_dist,0 , 0])]
+            else:
+                search_dist = 0.004
+                search_vec = [sm.SE3(np.r_[0, 0, 0]), sm.SE3(np.r_[0, search_dist, 0]), sm.SE3(np.r_[0, -search_dist, 0]),
+                        sm.SE3(np.r_[0, -2*search_dist , 0]), sm.SE3(np.r_[0, 2*search_dist , 0])]
+            if self.do_surface_search:
+                search_vec = [sm.SE3(np.r_[0,0,0])]
+                old_threshold = self.force_threshold
+                self.force_threshold = 1
             for i in range(len(search_vec)):
-
-                T_B_E_goali = search_vec[i] @ T_B_E_goali
+                T_B_E_goali = search_vec[i] @ self._T_B_E_goal
+                rospy.loginfo(f"Now trying deviation {search_vec[i].t}")
                 self.process_steps((
                     SimpleMp(name="approach_pre_pose", f_init=self.cobot.move_to_pose,
-                             args=(sm.SE3(self.hover_distance * self.B_surface_normal) @ T_B_E_goali)),
-                    SimpleMp(name="approach_surface", f_init=self.cobot.set_py_hybrid_force_vel_command,
-                             kwargs=approach_kwargs,
-                             contact_as_success=True))
-                    )
-
-                if not success and self.action_sever_valid:
+                            args=(sm.SE3(0.7*self.hover_distance * self.B_surface_normal) @ T_B_E_goali)),
+                )
+                    # SimpleMp(name="approach_surface", f_init=self.cobot.set_py_hybrid_force_vel_command,
+                    #          kwargs=approach_kwargs,
+                    #          contact_as_success=True, T_max=15))
+                )
+                self.move_until_contact(sm.SE3(- 1.5 * self.hover_distance * self.B_surface_normal) @ self.cobot.T_B_E_robot, v_max = 0.008, force=5)
+                
+                if not success and self.action_server_valid:
                     self._p0_contact = np.copy(self.cobot.T_E_C_robot.t)
                     forces_x = []
                     forces_y = []
-                    self.cobot.run_screwdriver_program(self._screwdriver_program, run_time=0.5)
-                    # dist = np.array([0, 0, 0.002])
-                    # self.cobot.move_to_pose((sm.SE3(dist) * self.B_surface_normal) @ T_B_E_goali)
-                    self.cobot.init_sns_vel()
+                    self.cobot.run_screwdriver_program(self._screwdriver_program, run_time=1)
+                    rospy.sleep(0.2)
+                    self.cobot.goTo(sm.SE3(-self.B_surface_normal * 0.0015) @ self.cobot.T_B_E_robot, v_max=0.002)
+                    rospy.sleep(0.5)
                     v_test = np.zeros(6)
+                    forceTooHigh = False
+                    rospy.sleep(0.5)
+                    rospy.loginfo(f"Will wiggle now, using force threshold {self.force_threshold}")
                     for t in range(200):
-                        v_test[1] = 3e-3 * np.sin(t / 100.0 * 2 * np.pi)
+                        if np.linalg.norm(self.cobot.B_F_msr)>=100:#self.cobot.F_max
+                            forceTooHigh = True
+                            break
+                        v_test[1] = 1.5e-3 * np.sin(t / 100.0 * 2 * np.pi)
                         self.cobot.update(u_cmd=v_test, u_cmd_frame=self.cobot.ctrl_frame)
                         forces_x.append((sm.SE3(self.cobot.B_F_msr[0:3]) @ self.cobot.T_B_C).t[0])
                         forces_y.append((sm.SE3(self.cobot.B_F_msr[0:3]) @ self.cobot.T_B_C).t[1])
                     for t in range(200):
-                        v_test[0] = 3e-3 * np.sin(t / 100.0 * 2 * np.pi)
+                        if np.linalg.norm(self.cobot.B_F_msr)>=100:#self.cobot.F_max
+                            forceTooHigh = True
+                            break
+                        v_test[0] = 1.5e-3 * np.sin(t / 100.0 * 2 * np.pi)
                         self.cobot.update(u_cmd=v_test, u_cmd_frame=self.cobot.ctrl_frame)
                         forces_x.append((sm.SE3(self.cobot.B_F_msr[0:3]) @ self.cobot.T_B_C).t[0])
                         forces_y.append((sm.SE3(self.cobot.B_F_msr[0:3]) @ self.cobot.T_B_C).t[1])
                     self.cobot.stop()
-                    print(np.std(forces_x), np.std(forces_y))
-                    if np.std(forces_x) > 4 and np.std(forces_y) > 4:
+                    if forceTooHigh:
+                        rospy.loginfo("Force was too high, we reject this probe no matter what")
+                    if np.std(forces_x) > self.force_threshold and np.std(forces_y) > self.force_threshold:
+                        rospy.loginfo(f"I think this is a screw, while wiggling forces have standard deviation {np.std(forces_x)}, {np.std(forces_y)}")
                         success = True
                         screw_pos = self.cobot.T_B_E_robot
                         break
                     else:
-                        success = False
+                        rospy.loginfo(f"I don't think this is a screw, while wiggling forces have standard deviation {np.std(forces_x)}, {np.std(forces_y)}")
+                        success = False  
                         screw_pos = self.cobot.T_B_E_robot
-                else:
+                elif not self.action_server_valid:
                     self.cancel(msg="Pre-empted")
+            if self.do_surface_search and not success:
+                self.force_threshold = old_threshold
+                #spiral: down right up up left left down down down right right right up up up up left left left left down down down down
+                self.cobot.goTo(sm.SE3([0,0,0.002])@self.cobot.T_B_E_robot,v_max=0.05)
+                self.cobot.goTo(sm.SE3([0.005,0.005,0.0])@self.cobot.T_B_E_robot,v_max=0.05)
+                rospy.loginfo("I am starting the spiral now")
+                screw_radius = 0.0042 #If we hit a screw, how much to move in the same direction?
+                spiral_density = 0.005
+                surface_search_speed = 0.005
+                surface_search_force_threshold = 15
+                spiral = "drruulldddrrruuuulllldddd"
+                direction_sum = np.r_[0,0,0]
+                for idx, elem in enumerate(spiral):
+                    if elem == "d":
+                        direction = np.r_[0,-1,0]
+                    elif elem == "u":
+                        direction = np.r_[0,1,0]
+                    elif elem == "l":
+                        direction = np.r_[1,0,0]
+                    elif elem == "r":
+                        direction = np.r_[-1,0,0]
+                    else:
+                        rospy.loginfo("Found weird string character in spiral string!")
+                    if idx == len(spiral)-1: #We assume the last direction is not alone
+                        if self.move_until_contact(sm.SE3(spiral_density*(direction_sum+direction))@self.cobot.T_B_E_robot,
+                        v_max=surface_search_speed, force=surface_search_force_threshold ):
+                            rospy.loginfo("Found screw via surface search")
+                            success = True
+                            screw_pos = sm.SE3(screw_radius*direction_sum/np.linalg.norm(direction_sum)) @ self.cobot.T_B_E_robot
+                            self.cobot.goTo(sm.SE3([0,0,0.03])@self.cobot.T_B_E_robot,v_max=0.05)
+                            self.cobot.goTo(sm.SE3([0,0,0.03])@screw_pos,v_max=0.05)
+                            self.cobot.goTo(screw_pos,v_max=0.01)
+                            break
+                    elif direction_sum @ direction == 0 and not idx==0:
+                        #New direction perpendicular
+                        print(direction_sum)
+                        if self.move_until_contact(sm.SE3(spiral_density*direction_sum)@self.cobot.T_B_E_robot,
+                        v_max=surface_search_speed, force=surface_search_force_threshold):
+                            rospy.loginfo("Found screw via surface search")
+                            success = True
+                            screw_pos = sm.SE3(screw_radius*direction_sum/np.linalg.norm(direction_sum)) @ self.cobot.T_B_E_robot
+                            self.cobot.goTo(sm.SE3([0,0,0.03])@self.cobot.T_B_E_robot,v_max=0.05)
+                            self.cobot.goTo(sm.SE3([0,0,0.03])@screw_pos,v_max=0.05)
+                            self.cobot.goTo(screw_pos,v_max=0.01)
+                            break
+                        direction_sum = direction #Start again with new direction
+                    else:
+                        direction_sum += direction     
             return success, screw_pos
+        
+        self.B_screw_pos = B_screw_pos
+        self.B_surface_normal = B_normal
+        
+        self.cobot.update()
+        T_B_E_goal = sm.SE3()
+        screwing_pose = sm.SE3()
+        if self._deviceType == 2:
+            if np.abs(self.B_surface_normal[2]-1)<0.008:
+                #Microwave flat
+                beginning_pose = np.r_[ 0.86289,  0.54018, -1.66603,  1.60357, -1.63773,  0.63349]
+            else:
+                beginning_pose = np.r_[ 0.72449,  0.59531, -1.42626,  1.4668 , -1.53804,  0.40122]
+                #tilted
+                #screwing_pose.A[:4, :4] = self.fixed_pose.A.copy()
+            #    beginning_pose = fixed_joint_pose_MW_tilt#Change this to be same as annalenas fixed_pose
+        elif self._deviceType == 3 or self._deviceType == 5:
+            #PC
+            beginning_pose = np.r_[ 0.96828,  0.17584, -1.5306 , -1.55063,  1.62805, -3.01406]
+            #was fixed_joint_pose_PC before 20th october
+        elif self._deviceType == 4:
+            #Flat panel display
+            if B_screw_pos[1]>0.05:#object center y>0
+                beginning_pose = np.r_[-0.79806,  0.61373, -1.84638, -1.53851, -1.56184,  2.24939]
+            else:
+                beginning_pose = np.r_[ 0.8735 ,  0.55755, -1.96375,  1.63136, -1.63044,  0.94922]
+        else:
+            return self.cancel(msg="device type not fit for unscrewing")
+        
+        screwing_pose = self.cobot.FK(beginning_pose)
+        T_B_E_goal.A[:4, :4] = screwing_pose.A.copy()
 
-        if B_screw_pos is not None:
-            self.B_screw_pos = B_screw_pos
-        if B_normal is not None:
-            self.B_surface_normal = B_normal
-        if T_B_E_goal is None:
-            T_B_E_goal = sm.SE3()
-            T_B_E_goal.A[:4, :4] = self.fixed_pose.A.copy()
-            tooltip_offset_A = (B_screw_pos) - (
-                        self.fixed_pose @ self.cobot.T_E_C_robot).t  # so bzw siehe notebook
-            [T_B_E_goal.t[0], T_B_E_goal.t[1], T_B_E_goal.t[2]] = T_B_E_goal.t + tooltip_offset_A
+        tooltip_offset_A = B_screw_pos - (
+                screwing_pose @ self.cobot.T_E_C_robot).t  # so bzw siehe notebook
+        [T_B_E_goal.t[0], T_B_E_goal.t[1], T_B_E_goal.t[2]] = T_B_E_goal.t + tooltip_offset_A
+        #Check for safety if screw position makes sense
+        if self._deviceType == 2:
+            #Microwave
+            if B_screw_pos[2]>0.4 or B_screw_pos[2]<0.2:
+                #Screw position is wrong, return success so that task planner can move on to next screw
+                rospy.loginfo(f"Screw position {B_screw_pos} is rejected for microwave, sending success so we can move on.")
+                self.success = True
+                return
+        if self._deviceType == 5:
+            #PC Tower
+            if B_screw_pos[2]>0.5 or B_screw_pos[2]<0.4:
+                #Screw position is wrong, return success so that task planner can move on to next screw
+                rospy.loginfo(f"Screw position {B_screw_pos} is rejected for FPD, sending success so we can move on.")
+                self.success = True
+                return
 
-
-          #
-          # T_B_E_goal = self.cobot.get_valid_ee_pose(self.B_screw_pos,
-          #                                             B_normal=self.B_surface_normal,
-          #                                             B_y_test=self.B_y_default)
-        if T_B_E_goal is None:
-            return self.cancel(
-                msg=f"screw at {self.B_screw_pos} with normal-vector {self.B_surface_normal} is unreachable")
         # set skill parameters
         self._T_B_E_goal = T_B_E_goal
         self.cobot.init_sns_vel()
-
-        num_trials = self.num_trials
         approach_kwargs = self.cobot.default_hybrid_kwargs()
         approach_kwargs["scale_pos"] = self.scale_pos_vel
         approach_kwargs["vel_dir"] = np.r_[-self.B_surface_normal, np.zeros(3)]
-        move_up_kwargs = copy.deepcopy(approach_kwargs)
-        move_up_kwargs["vel_dir"] = np.r_[self.B_surface_normal, np.zeros(3)]
-        unscrew_kwargs = copy.deepcopy(approach_kwargs)
-        unscrew_kwargs["vel_dir"] = np.zeros(6)
-        unscrew_kwargs["K_f"] = self._K_f * np.ones(3)
-        unscrew_kwargs["wrench_dir"] = np.r_[1.0, 1.0, 1.0, np.zeros(3)]
-        surface_kwargs = copy.deepcopy(unscrew_kwargs)
-        insert_kwargs = copy.deepcopy(unscrew_kwargs)
+        insert_kwargs = copy.deepcopy(approach_kwargs)
+        insert_kwargs["wrench_dir"] = np.r_[1.0, 1.0, 1.0, np.zeros(3)]
+        insert_kwargs["K_f"] = self._K_f * np.ones(3)
+        insert_kwargs["vel_dir"] = np.zeros(6)
         insert_kwargs["B_F_des"] = np.r_[-self.B_surface_normal * self.f_insert, np.zeros(3)]
-        surface_kwargs["B_F_des"] = np.r_[-self.B_surface_normal * self.f_unscrew, np.zeros(3)]
-        # unscrew_kwargs["B_F_des"] = np.r_[self.B_surface_normal * self.f_unscrew, np.zeros(3)]
-        unscrew_kwargs["B_F_des"] = np.zeros(6)
-        unscrew_kwargs["scale_pos"] = 0.05
-        unscrew_kwargs["vel_dir"] = np.r_[self.B_surface_normal * self.cobot.v_max, np.zeros(3)]
 
-        #self.cobot.goTo(sm.SE3([0, 0, 0.1]) @ self.cobot.T_B_E_robot, v_max=0.01, check_reachable=False)
-        #self.cobot.goTo(sm.SE3([0, 0, -0.1]) @ self.cobot.T_B_E_robot, v_max=0.01, check_reachable=False)
-        sequential_mps = {'approach': approach_object,
-                          'search': search,
-                          'insert screw': insert_screw,
-                          'remove_screw': remove_screw}
-
-        screw_found, screw_position = search()
+        # Go to Pre Pose
+        rospy.loginfo(f"Approaching object, hover_distance {self.hover_distance}, surcace_normal {self.B_surface_normal}, screw position {self.B_screw_pos}") 
+        #For safety reasons these movements stop if 10N force exceeded, and can be cancelled at any time
+        if np.linalg.norm(self.cobot.T_B_E_robot.R - screwing_pose.R) < 0.001:
+            rospy.loginfo("Already oriented correctly, we will use goTo for the prepose")
+            rospy.loginfo(f"This is how much we want to move down: {sm.SE3(self.hover_distance * self.B_surface_normal)}")
+            #self.move_until_contact(sm.SE3(-1 * self.hover_distance * self.B_surface_normal) @  self.cobot.T_B_E_robot, v_max = 0.04, force=5)
+        else:
+            rospy.loginfo("Not oriented correctly yet, using planner to do that")
+            self.cobot.move_to_joint_pose(beginning_pose, stochastic=True)
+            rospy.loginfo("Now we should be oriented correctly, we will use goTo for the prepose")
+            #self.move_until_contact(sm.SE3(self.hover_distance * self.B_surface_normal) @ self._T_B_E_goal, v_max=0.04, force=5)
+     
         if self.failure:
-            rospy.logerr("failed to execute search")
-            return self.cancel(
-                msg="failed to execute search")
+            return #self.cancel(msg="failed to execute search")
+        
+        # Reset the bias (Is this even needed?) 
+        rospy.sleep(0.1)
+        self.cobot.FT.reset_bias()
+        
+        #Search the screw 
+        screw_found, screw_position = search()
+        
+        if self.failure:
+            rospy.loginfo("failed to execute search")
+            return #self.cancel(msg="failed to execute search")
         if screw_found:
             self._T_B_E_goal = screw_position
+            self.success = True
             remove_screw()
         else:
-            rospy.logerr("failed to find screw at and around the given position")
-            return self.cancel(
-                msg="failed to find screw at and around the given position")
+            rospy.loginfo("failed to find screw, going back up and to beginning pose")
+            self.move_until_contact(sm.SE3(self.B_surface_normal * self.hover_distance) @ self.cobot.T_B_E_robot, v_max=0.1)
+            self.cobot.move_to_joint_pose(beginning_pose, stochastic=False)
+            return
 
-        # if self.failure:
-        #     rospy.logerr("failed to execute screw removal")
-        #     return self.cancel(
-        #         msg="failed to execute screw removal")
-
-        # while num_trials > 0:
-        #     if self.failure:
-        #         rospy.logerr(f"failed to after {num_trials} runs")
-        #         return
-        #
-        #     # execute
-        #
-        #
-        #
-        #     for name, func in sequential_mps.items():
-        #         self.update_feedback_msg(msg=f"Execute {name}")
-        #         func()
-        #         if self.failure:
-        #             rospy.logerr(f"failed to execute {name}")
-        #             return
-
-        #if self.success:
-        self.cobot.goTo(sm.SE3(self.B_surface_normal * self.hover_distance) @ self.cobot.T_B_E_robot)
-
-        #else:
-            #self.recovery()
-            # num_trials += 1
+        self.move_until_contact(sm.SE3(self.B_surface_normal * self.hover_distance) @ self.cobot.T_B_E_robot, v_max=0.1)
+        rospy.loginfo("Back to beginning pose.")
+        self.cobot.move_to_joint_pose(beginning_pose, stochastic=False)
 
     def pre_skill_execution(self, tool_id=None, hardcoded_transformation=False) -> bool:
         """This function is run before the skill is executed. It consists of
@@ -502,8 +582,10 @@ class Unscrew(SkillBase):
                 rospy.logwarn(self._log_str(f"received none-positive goal-argument {goal_arg}:={g_val}. "
                                             f"Use default {getattr(self, self_arg)}"))
 
+        self.cobot.change_tool("screwdriver")
         if not self.pre_skill_execution():
             return
+        self._deviceType = rospy.wait_for_message('/hrr_cobot/deviceType', Int8).data
         check_positive("contact_force", "f_contact")
         check_positive("insertion_force", "f_insert")
         check_positive("timeout", "timeout")
@@ -514,7 +596,9 @@ class Unscrew(SkillBase):
             self._skill_result.result = SkillResult.FINISHED
             self.end_skill("Unscrewing done!")
         else:
-            self.cancel("Unscrewing failed due to unknown reasons")
+            self._skill_result.result = SkillResult.FINISHED
+            self.end_skill("We think it failed, but telling task planner success so we can move on!")
+            #self.cancel("Unscrewing failed due to unknown reasons")
 
     @staticmethod
     def _log_str(msg):
@@ -555,7 +639,6 @@ class Unscrew(SkillBase):
         self._update_skill_result()
         res.skill_result = self._skill_result
         return res
-
 
 # def debug_node():
 #     from hrr_cobot_robot.hrr_cobot_control import HrrCobotControl

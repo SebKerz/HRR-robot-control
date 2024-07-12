@@ -8,6 +8,7 @@ Sensor Track Velocity Control Interface
 Python-handle for the ``sns_trk_velocity_controller.cpp``
 Allows sending `Cartesian` `velocities` to a COMAU robot.
 """
+from socket import TCP_NODELAY
 from typing import Optional
 import numpy as np
 
@@ -74,9 +75,9 @@ class SnsTrkCmd(BaseController):
         self._center[1] = rospy.get_param(f"{cobot_prefix}center/y", 0.0)
         self._center[2] = rospy.get_param(f"{cobot_prefix}center/z", 0.0)
         if sns_trk_twist_topic_name:
-            self._pub_sns_trk_twist = rospy.Publisher(sns_trk_twist_topic_name, SnsTrkTwistCmd, queue_size=10)
+            self._pub_sns_trk_twist = rospy.Publisher(sns_trk_twist_topic_name, SnsTrkTwistCmd, queue_size=10, tcp_nodelay = True)
         if gm_topic_name:
-            self._pub_sns_frame = rospy.Publisher(gm_topic_name, TwistStamped, queue_size=10)
+            self._pub_sns_frame = rospy.Publisher(gm_topic_name, TwistStamped, queue_size=10, tcp_nodelay = True)
         if viz_topic:
             self._viz_pub = rospy.Publisher(viz_topic, TwistStamped, queue_size=10)
 

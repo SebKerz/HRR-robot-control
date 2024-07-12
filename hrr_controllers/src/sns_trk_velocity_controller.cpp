@@ -186,9 +186,9 @@ namespace hrr_controllers
             m_dt = 1.0 / pars.loop_rate;
         ROS_DEBUG("[%s] set dt:=%.3f", m_log_name.c_str(), m_dt);
         m_debug = pars.debug;
-        m_cmd_subs.push_back(nh.subscribe(pars.cmd_topic_name, 1, &SnsTrkVelocityController::twistCmdCb, this));
+        m_cmd_subs.push_back(nh.subscribe(pars.cmd_topic_name, 1, &SnsTrkVelocityController::twistCmdCb, this, ros::TransportHints().tcpNoDelay()));
         m_cmd_subs.push_back(
-                nh.subscribe(pars.sns_trk_cmd_topic_name, 1, &SnsTrkVelocityController::snsTrkTwistCmdCb, this));
+                nh.subscribe(pars.sns_trk_cmd_topic_name, 1, &SnsTrkVelocityController::snsTrkTwistCmdCb, this, ros::TransportHints().tcpNoDelay()));
         m_reference_frame = getReferenceFrame(m_hw_handle);
         m_tf_buffer.reset(new tf2_ros::Buffer());
         m_tf_listener.reset(new tf2_ros::TransformListener(*m_tf_buffer, true));
