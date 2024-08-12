@@ -1,3 +1,0 @@
-- builder: sphinx
-  name: hrr_cobot package documentation
-  sphinx_root_dir: doc

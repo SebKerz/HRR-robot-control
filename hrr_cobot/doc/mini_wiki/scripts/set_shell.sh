@@ -1,1 +1,0 @@
-../../../../data/set_shell.sh
