@@ -7,8 +7,8 @@ It wraps a COMAU-Racer 5 0.80 industrial robot or cobot with dedicated tools and
 
 The focus was on providing 
 - a framework for the ROS-based control of the robot, including motion planner and end-effector control in SE(3),
-- control capabilities of end-effector tools (electric and pneumatic gripper, screwdriver, shaft grinder)
-- force-guided manipulation skills that rely on F/T-measurements at the wrist of the robot to cope with uncertain visual input
+- control capabilities of end-effector tools (electric and pneumatic gripper, screwdriver, shaft grinder),
+- force-guided manipulation skills that rely on F/T-measurements at the wrist of the robot to cope with uncertain visual input.
   
 ## Package-overview
 
